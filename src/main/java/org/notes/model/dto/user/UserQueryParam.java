@@ -11,7 +11,7 @@ import javax.validation.constraints.NotNull;
 public class UserQueryParam {
 
     @Min(value = 1, message = "userId必须为正整数")
-    private long userId;
+    private Long userId;
 
     private String account;
 

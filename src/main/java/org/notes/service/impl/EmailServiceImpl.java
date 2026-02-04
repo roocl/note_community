@@ -56,12 +56,12 @@ public class EmailServiceImpl implements EmailService {
             // 设置 email 发送注册验证码的限制
             String emailLimitKey = RedisKey.registerVerificationLimitCode(email);
             redisTemplate.opsForValue().set(emailLimitKey, "1", limitExpireSeconds, TimeUnit.SECONDS);
+
+            return verificationCode;
         } catch (Exception e) {
             log.error("发送验证码邮件失败", e);
             throw new RuntimeException("发送验证码失败，请稍后重试");
         }
-
-        return verificationCode;
     }
 
     @Override
