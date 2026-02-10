@@ -4,7 +4,7 @@ import org.notes.model.base.ApiResponse;
 import org.notes.model.dto.user.LoginRequest;
 import org.notes.model.dto.user.RegisterRequest;
 import org.notes.model.dto.user.UpdateUserRequest;
-import org.notes.model.dto.user.UserQueryParam;
+import org.notes.model.dto.user.UserQueryParams;
 import org.notes.model.entity.User;
 import org.notes.model.vo.user.AvatarVO;
 import org.notes.model.vo.user.LoginUserVO;
@@ -29,5 +29,5 @@ public interface UserService {
 
     public ApiResponse<AvatarVO> uploadAvatar(MultipartFile file);
 
-    public ApiResponse<List<User>> getUserList(UserQueryParam queryParam);
+    public ApiResponse<List<User>> getUserList(UserQueryParams queryParam);
 }

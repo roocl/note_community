@@ -9,11 +9,11 @@ import org.springframework.http.HttpStatus;
 public class ApiResponseUtil {
 
     public static <T> ApiResponse<T> success(String msg, T data) {
-        return ApiResponse.success(data);
+        return ApiResponse.success(msg, data);
     }
 
     public static <T> ApiResponse<T> success(String msg) {
-        return ApiResponse.success(null);
+        return ApiResponse.success(msg, null);
     }
 
     public static <T> ApiResponse<T> error(String msg) {

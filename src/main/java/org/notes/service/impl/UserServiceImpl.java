@@ -2,13 +2,14 @@ package org.notes.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import lombok.extern.log4j.Log4j2;
+import org.notes.annotation.NeedLogin;
 import org.notes.mapper.UserMapper;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.Pagination;
 import org.notes.model.dto.user.LoginRequest;
 import org.notes.model.dto.user.RegisterRequest;
 import org.notes.model.dto.user.UpdateUserRequest;
-import org.notes.model.dto.user.UserQueryParam;
+import org.notes.model.dto.user.UserQueryParams;
 import org.notes.model.entity.User;
 import org.notes.model.vo.user.AvatarVO;
 import org.notes.model.vo.user.LoginUserVO;
@@ -182,6 +183,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    @NeedLogin
     public ApiResponse<LoginUserVO> updateUserInfo(UpdateUserRequest request) {
         Long userId = requestScopeData.getUserId();
 
@@ -217,7 +220,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<List<User>> getUserList(UserQueryParam queryParam) {
+    public ApiResponse<List<User>> getUserList(UserQueryParams queryParam) {
         // 分页数据
         int total = userMapper.countByQueryParam(queryParam);
         int offset = PaginationUtils.calculateOffset(queryParam.getPage(), queryParam.getPageSize());

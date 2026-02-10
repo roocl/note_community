@@ -2,7 +2,7 @@ package org.notes.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.notes.model.dto.user.UserQueryParam;
+import org.notes.model.dto.user.UserQueryParams;
 import org.notes.model.entity.User;
 
 import java.util.List;
@@ -26,11 +26,11 @@ public interface UserMapper {
 
     User findByEmail(@Param("email") String email);
 
-    List<User> findByQueryParam(@Param("queryParams") UserQueryParam queryParams,
+    List<User> findByQueryParam(@Param("queryParams") UserQueryParams queryParams,
                                 @Param("limit") Integer limit,
                                 @Param("offset") Integer offset);
 
-    int countByQueryParam(@Param("queryParams") UserQueryParam queryParams);
+    int countByQueryParam(@Param("queryParams") UserQueryParams queryParams);
 
     int update(User user);
 

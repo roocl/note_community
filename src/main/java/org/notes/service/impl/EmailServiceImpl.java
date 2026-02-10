@@ -1,8 +1,9 @@
 package org.notes.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.notes.model.enums.RedisKey;
+import org.notes.model.enums.redisKey.RedisKey;
 import org.notes.service.EmailService;
 import org.notes.task.email.EmailTask;
 import org.notes.utils.RandomCodeUtil;
@@ -15,10 +16,10 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;

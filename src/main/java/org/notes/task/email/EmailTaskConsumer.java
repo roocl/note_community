@@ -2,7 +2,7 @@ package org.notes.task.email;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.notes.model.enums.RedisKey;
+import org.notes.model.enums.redisKey.RedisKey;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;

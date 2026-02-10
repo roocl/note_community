@@ -8,7 +8,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 @Data
-public class UserQueryParam {
+public class UserQueryParams {
 
     @Min(value = 1, message = "userId必须为正整数")
     private Long userId;
