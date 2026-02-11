@@ -30,7 +30,7 @@ public interface UserMapper {
                                 @Param("limit") Integer limit,
                                 @Param("offset") Integer offset);
 
-    int countByQueryParam(@Param("queryParams") UserQueryParams queryParams);
+    int countUsersByQueryParam(@Param("queryParams") UserQueryParams queryParams);
 
     int update(User user);
 

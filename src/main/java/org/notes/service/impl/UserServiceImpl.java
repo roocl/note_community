@@ -29,7 +29,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Log4j2
 @Service
@@ -222,7 +225,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public ApiResponse<List<User>> getUserList(UserQueryParams queryParam) {
         // 分页数据
-        int total = userMapper.countByQueryParam(queryParam);
+        int total = userMapper.countUsersByQueryParam(queryParam);
         int offset = PaginationUtils.calculateOffset(queryParam.getPage(), queryParam.getPageSize());
         Pagination pagination = new Pagination(queryParam.getPage(), queryParam.getPageSize(), total);
 
@@ -232,5 +235,16 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             return ApiResponseUtil.error(e.getMessage());
         }
+    }
+
+    @Override
+    public Map<Long, User> getUserMapByIds(List<Long> authorIds) {
+        if (authorIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<User> users = userMapper.findByIdBatch(authorIds);
+
+        return users.stream().collect(Collectors.toMap(User::getUserId, user -> user));
     }
 }

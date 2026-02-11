@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -70,7 +71,7 @@ public class EmailServiceImpl implements EmailService {
         String redisKey = RedisKey.registerVerificationCode(email);
         String verificationCode = redisTemplate.opsForValue().get(redisKey);
 
-        if (verificationCode != null && verificationCode.equals(code)) {
+        if (verificationCode != null && Objects.equals(verificationCode, code)) {
             redisTemplate.delete(redisKey);
             return true;
         }

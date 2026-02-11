@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @Transactional
 public interface UserService {
@@ -30,4 +31,6 @@ public interface UserService {
     public ApiResponse<AvatarVO> uploadAvatar(MultipartFile file);
 
     public ApiResponse<List<User>> getUserList(UserQueryParams queryParam);
+
+    Map<Long, User> getUserMapByIds(List<Long> authorIds);
 }

@@ -91,7 +91,7 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="countByQueryParam" resultType="integer">
+    <select id="countUsersByQueryParam" resultType="integer">
         SELECT COUNT(*)
         FROM user
         <include refid="whereClause" />

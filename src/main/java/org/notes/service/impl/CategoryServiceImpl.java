@@ -2,6 +2,7 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.notes.mapper.CategoryMapper;
+import org.notes.mapper.QuestionMapper;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.category.CreateCategoryBody;
@@ -36,7 +37,8 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryMapper categoryMapper;
 
-//    private final QuestionMapper QuestionMapper;
+    private final QuestionMapper QuestionMapper;
+    private final QuestionMapper questionMapper;
 
     @Override
     public List<CategoryVO> buildCategoryTree() {
@@ -85,7 +87,7 @@ public class CategoryServiceImpl implements CategoryService {
             if (deleteCount != categoryIds.size()) {
                 throw new RuntimeException("删除分类失败");
             }
-            //todo 删除这些分类下的所有题目
+            questionMapper.deleteByCategoryId(categoryId);
             
             return ApiResponseUtil.success("删除分类成功");
         } catch (Exception e) {
