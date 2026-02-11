@@ -1,5 +1,6 @@
 package org.notes.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import org.notes.mapper.CategoryMapper;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
@@ -29,14 +30,13 @@ import java.util.Map;
  * @author makejava
  * @since 2026-02-04 19:19:32
  */
-@Service("categoryService")
+@Service
+@RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
-    @Autowired
-    private CategoryMapper categoryMapper;
+    private final CategoryMapper categoryMapper;
 
-//    @Autowired
-//    private QuestionMapper QuestionMapper;
+//    private final QuestionMapper QuestionMapper;
 
     @Override
     public List<CategoryVO> buildCategoryTree() {

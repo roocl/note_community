@@ -44,7 +44,7 @@ public class CategoryController {
      * @param createCategoryBody 实体
      * @return 新增结果
      */
-    @PostMapping("/admin/createCategories")
+    @PostMapping("/admin/categories")
     public ApiResponse<CreateCategoryVO> createCategory(
             @Valid @RequestBody CreateCategoryBody createCategoryBody) {
         return categoryService.createCategory(createCategoryBody);

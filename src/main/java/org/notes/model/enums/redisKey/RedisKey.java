@@ -1,4 +1,4 @@
-package org.notes.model.enums;
+package org.notes.model.enums.redisKey;
 
 public class RedisKey {
     public static String registerVerificationCode(String email) {

@@ -7,8 +7,7 @@ import org.notes.model.dto.category.UpdateCategoryBody;
 import org.notes.model.entity.Category;
 import org.notes.model.vo.category.CategoryVO;
 import org.notes.model.vo.category.CreateCategoryVO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -18,6 +17,7 @@ import java.util.List;
  * @author makejava
  * @since 2026-02-04 19:19:32
  */
+@Transactional
 public interface CategoryService {
 
     List<CategoryVO> buildCategoryTree();
