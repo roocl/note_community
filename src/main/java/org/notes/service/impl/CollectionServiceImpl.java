@@ -105,7 +105,7 @@ public class CollectionServiceImpl implements CollectionService {
             collectionMapper.deleteById(collectionId);
             collectionNoteMapper.deleteByCollectionId(collectionId);
 
-            return ApiResponseUtil.success("删除收藏夹成功", new EmptyVO());
+            return ApiResponseUtil.success("删除收藏夹成功");
         } catch (Exception e) {
             return ApiResponseUtil.error("删除收藏夹失败");
         }

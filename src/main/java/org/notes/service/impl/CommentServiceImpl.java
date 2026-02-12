@@ -119,7 +119,7 @@ public class CommentServiceImpl implements CommentService {
         try {
             comment.setContent(request.getContent());
             commentMapper.update(comment);
-            return ApiResponseUtil.success("更新评论成功", new EmptyVO());
+            return ApiResponseUtil.success("更新评论成功");
         } catch (Exception e) {
             return ApiResponseUtil.error("更新评论失败");
         }
@@ -142,7 +142,7 @@ public class CommentServiceImpl implements CommentService {
 
         try {
             commentMapper.deleteById(commentId);
-            return ApiResponseUtil.success("删除评论成功", new EmptyVO());
+            return ApiResponseUtil.success("删除评论成功");
         } catch (Exception e) {
             return ApiResponseUtil.error("删除评论失败");
         }
@@ -280,7 +280,7 @@ public class CommentServiceImpl implements CommentService {
             messageDTO.setIsRead(false);
 
             messageService.createMessage(messageDTO);
-            return ApiResponseUtil.success("点赞评论成功", new EmptyVO());
+            return ApiResponseUtil.success("点赞评论成功");
         } catch (Exception e) {
             return ApiResponseUtil.error("点赞评论失败");
         }
@@ -302,7 +302,7 @@ public class CommentServiceImpl implements CommentService {
 
             commentLikeMapper.delete(commentId, userId);
 
-            return ApiResponseUtil.success("取消点赞评论成功", new EmptyVO());
+            return ApiResponseUtil.success("取消点赞评论成功");
         } catch (Exception e) {
             return ApiResponseUtil.error("取消点赞评论失败");
         }
