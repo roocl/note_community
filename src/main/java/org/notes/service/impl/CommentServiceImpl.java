@@ -64,12 +64,13 @@ public class CommentServiceImpl implements CommentService {
             }
 
             Long userId = requestScopeData.getUserId();
+            Integer parentId = request.getParentId();
 
             Comment comment = new Comment();
             comment.setNoteId(request.getNoteId());
             comment.setAuthorId(userId);
             comment.setNoteId(request.getNoteId());
-            comment.setParentId(request.getParentId());
+            comment.setParentId(parentId);
             comment.setContent(request.getContent());
             comment.setLikeCount(0);
             comment.setReplyCount(0);
@@ -78,7 +79,7 @@ public class CommentServiceImpl implements CommentService {
 
             noteMapper.incrementCommentCount(request.getNoteId());
 
-            if (request.getParentId() != null) {
+            if (parentId != null) {
                 commentMapper.incrementReplyCount(request.getParentId());
             }
 
@@ -87,8 +88,11 @@ public class CommentServiceImpl implements CommentService {
             messageDTO.setSenderId(userId);
             messageDTO.setType(MessageType.COMMENT);
             messageDTO.setTargetId(request.getNoteId());
-            //todo 区分回复笔记或评论
-            messageDTO.setTargetType(MessageTargetType.NOTE);
+            if (parentId != null) {
+                messageDTO.setTargetType(MessageTargetType.COMMENT);
+            } else {
+                messageDTO.setTargetType(MessageTargetType.NOTE);
+            }
             messageDTO.setContent(request.getContent());
             messageDTO.setIsRead(false);
 
