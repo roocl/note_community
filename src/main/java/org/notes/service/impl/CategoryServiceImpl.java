@@ -37,7 +37,6 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryMapper categoryMapper;
 
-    private final QuestionMapper QuestionMapper;
     private final QuestionMapper questionMapper;
 
     @Override

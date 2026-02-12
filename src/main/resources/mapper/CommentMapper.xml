@@ -20,9 +20,9 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="commentId">
         INSERT INTO comment (note_id, author_id, parent_id, content,
-                             like_count, reply_count, created_at, updated_at)
+                             like_count, reply_count)
         VALUES (#{noteId}, #{authorId}, #{parentId}, #{content},
-                #{likeCount}, #{replyCount}, #{createdAt}, #{updatedAt})
+                #{likeCount}, #{replyCount})
     </insert>
 
     <update id="update">

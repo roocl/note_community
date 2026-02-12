@@ -18,7 +18,7 @@ public class MessageController {
     @Autowired
     private MessageService messageService;
 
-    @GetMapping
+    @GetMapping("/message")
     @NeedLogin
     public ApiResponse<List<MessageVO>> getMessages() {
         return messageService.getMessages();

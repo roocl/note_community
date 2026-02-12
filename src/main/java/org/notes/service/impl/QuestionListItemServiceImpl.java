@@ -45,7 +45,6 @@ public class QuestionListItemServiceImpl implements QuestionListItemService {
 
     private final UserMapper userMapper;
 
-
     @Override
     public ApiResponse<List<QuestionListItemUserVO>> userGetQuestionListItems(QuestionListItemQueryParams queryParams) {
         int offset = PaginationUtils.calculateOffset(queryParams.getPage(), queryParams.getPageSize());
@@ -55,21 +54,23 @@ public class QuestionListItemServiceImpl implements QuestionListItemService {
         Integer questionListId = queryParams.getQuestionListId();
         QuestionList questionList = questionListMapper.findById(questionListId);
 
-        List<QuestionListItemVO> questionListItemVOS =
-                questionListItemMapper.findByQuestionListIdPage(
-                        queryParams.getQuestionListId(),
-                        queryParams.getPageSize(),
-                        offset
-                );
+        List<QuestionListItemVO> questionListItemVOS = questionListItemMapper.findByQuestionListIdPage(
+                queryParams.getQuestionListId(),
+                queryParams.getPageSize(),
+                offset);
+
+        questionListItemVOS = questionListItemVOS.stream()
+                .filter(item -> item.getQuestion() != null)
+                .toList();
 
         List<Integer> questionIds = questionListItemVOS.stream().map(
-                questionListItemVO -> questionListItemVO.getQuestion().getQuestionId()
-        ).toList();
+                questionListItemVO -> questionListItemVO.getQuestion().getQuestionId()).toList();
 
         final Set<Integer> userFinishedQuestionIds;
 
         if (requestScopeData.isLogin()) {
-            userFinishedQuestionIds = noteMapper.filterFinishedQuestionIdsByUser(requestScopeData.getUserId(), questionIds);
+            userFinishedQuestionIds = noteMapper.filterFinishedQuestionIdsByUser(requestScopeData.getUserId(),
+                    questionIds);
         } else {
             userFinishedQuestionIds = Collections.emptySet();
         }
@@ -78,9 +79,10 @@ public class QuestionListItemServiceImpl implements QuestionListItemService {
             QuestionListItemUserVO questionListItemUserVO = new QuestionListItemUserVO();
             BeanUtils.copyProperties(questionListItemVO, questionListItemUserVO);
 
-            QuestionListItemUserVO.UserQuestionStatus userQuestionStatus = questionListItemUserVO.getUserQuestionStatus();
+            QuestionListItemUserVO.UserQuestionStatus userQuestionStatus = new QuestionListItemUserVO.UserQuestionStatus();
             if (requestScopeData.isLogin()) {
-                userQuestionStatus.setFinished(userFinishedQuestionIds.contains(questionListItemVO.getQuestion().getQuestionId()));
+                userQuestionStatus.setFinished(
+                        userFinishedQuestionIds.contains(questionListItemVO.getQuestion().getQuestionId()));
             } else {
                 userQuestionStatus.setFinished(false);
             }

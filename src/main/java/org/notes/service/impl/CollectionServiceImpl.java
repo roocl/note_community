@@ -111,6 +111,7 @@ public class CollectionServiceImpl implements CollectionService {
         }
     }
 
+    //todo 移到collectionNote?
     @Override
     @NeedLogin
     @Transactional

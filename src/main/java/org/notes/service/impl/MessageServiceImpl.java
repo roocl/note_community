@@ -1,6 +1,7 @@
 package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.notes.annotation.NeedLogin;
 import org.notes.mapper.MessageMapper;
 import org.notes.mapper.UserMapper;
 import org.notes.model.base.ApiResponse;
@@ -45,6 +46,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    @NeedLogin
     public ApiResponse<List<MessageVO>> getMessages() {
         Long userId = requestScopeData.getUserId();
         List<Message> messages = messageMapper.selectByUserId(userId);
@@ -61,11 +63,14 @@ public class MessageServiceImpl implements MessageService {
             sender.setUserId(senderId);
             sender.setUsername(sendersInfo.get(senderId).getUsername());
             sender.setAvatarUrl(sendersInfo.get(senderId).getAvatarUrl());
+            messageVO.setSender(sender);
 
             if (!Objects.equals(message.getType(), MessageType.SYSTEM)) {
                 MessageVO.Target target = new MessageVO.Target();
                 target.setTargetId(message.getTargetId());
                 target.setTargetType(message.getTargetType());
+                //todo 获取questionSummary
+                messageVO.setTarget(target);
             }
 
             return messageVO;
@@ -75,6 +80,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    @NeedLogin
     public ApiResponse<EmptyVO> markAsRead(Integer messageId) {
         Long userId = requestScopeData.getUserId();
         messageMapper.markAsRead(messageId, userId);
@@ -82,6 +88,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    @NeedLogin
     public ApiResponse<EmptyVO> markBatchAsRead(List<Integer> messageIds) {
         Long userId = requestScopeData.getUserId();
         messageMapper.markBatchAsRead(messageIds, userId);
@@ -89,6 +96,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    @NeedLogin
     public ApiResponse<EmptyVO> markAllAsRead() {
         Long userId = requestScopeData.getUserId();
         messageMapper.markAllAsRead(userId);
@@ -96,6 +104,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    @NeedLogin
     public ApiResponse<EmptyVO> deleteMessage(Integer messageId) {
         Long userId = requestScopeData.getUserId();
         messageMapper.deleteMessage(messageId, userId);
@@ -103,6 +112,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    @NeedLogin
     public ApiResponse<Integer> getUnreadCount() {
         Long userId = requestScopeData.getUserId();
         Integer count = messageMapper.countUnread(userId);
