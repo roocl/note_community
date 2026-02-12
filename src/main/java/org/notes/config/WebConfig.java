@@ -1,8 +1,11 @@
 package org.notes.config;
 
+import org.notes.filter.TraceIdFilter;
 import org.notes.interceptor.TokenInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -29,4 +32,11 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/login", "/error");
     }
 
+    @Bean
+    public FilterRegistrationBean<TraceIdFilter> traceIdFilter() {
+        FilterRegistrationBean<TraceIdFilter> registrationBean = new FilterRegistrationBean<>();
+        registrationBean.setFilter(new TraceIdFilter());
+        registrationBean.addUrlPatterns("/*");
+        return registrationBean;
+    }
 }

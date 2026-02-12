@@ -11,6 +11,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import javax.mail.MessagingException;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -24,11 +25,17 @@ public class EmailTaskConsumer {
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
+    @Autowired
+    private org.thymeleaf.TemplateEngine templateEngine;
+
     @Value("${spring.mail.username}")
     private String from;
 
+    @Value("${mail.verify-code.template-path}")
+    private String templatePath;
+
     @Scheduled(fixedDelay = 3000)
-    public void resume() throws JsonProcessingException {
+    public void resume() throws MessagingException, JsonProcessingException {
         String emailQueueKey = RedisKey.emailTaskQueue();
 
         while (true) {
@@ -42,14 +49,27 @@ public class EmailTaskConsumer {
             String email = emailTask.getEmail();
             String verificationCode = emailTask.getCode();
 
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(from);
-            message.setTo(email);
-            message.setSubject("roocl-笔记社区-验证码");
-            message.setText("您的验证码是：" + verificationCode + "，有效期" + 5 + "分钟，请勿泄露给他人。");
+            // 准备 Thymeleaf 上下文
+            org.thymeleaf.context.Context context = new org.thymeleaf.context.Context();
+            context.setVariable("verifyCode", verificationCode);
+            context.setVariable("operationType", "注册/身份验证");
+
+            // 渲染模板
+            String emailContent = templateEngine.process(templatePath, context);
+
+            javax.mail.internet.MimeMessage message = mailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(
+                    message, true, "UTF-8");
+
+            helper.setFrom(from);
+            helper.setTo(email);
+            helper.setSubject("roocl-笔记社区-验证码");
+            helper.setText(emailContent, true);
+
             mailSender.send(message);
 
-            redisTemplate.opsForValue().set(RedisKey.registerVerificationCode(email), verificationCode, 5, TimeUnit.MINUTES);
+            redisTemplate.opsForValue().set(RedisKey.registerVerificationCode(email), verificationCode, 5,
+                    TimeUnit.MINUTES);
         }
     }
 }
