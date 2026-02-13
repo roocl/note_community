@@ -3,7 +3,6 @@ package org.notes.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.notes.annotation.NeedLogin;
 import org.notes.mapper.MessageMapper;
-import org.notes.mapper.UserMapper;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.message.MessageDTO;

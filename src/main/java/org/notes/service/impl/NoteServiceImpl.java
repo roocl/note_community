@@ -102,7 +102,7 @@ public class NoteServiceImpl implements NoteService {
 
                 //todo markdown折叠
 
-                noteVO.setUserActions(userActionsVO);
+                noteVO.setUserActionsVO(userActionsVO);
                 return noteVO;
             }).toList();
 

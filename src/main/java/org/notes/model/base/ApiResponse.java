@@ -1,14 +1,25 @@
 package org.notes.model.base;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * 统一返回格式
+ */
+@ApiModel("统一API响应")
 @Data
 @NoArgsConstructor
 public class ApiResponse<T> {
 
+    @ApiModelProperty("状态码")
     private int code;
+
+    @ApiModelProperty("消息")
     private String message;
+
+    @ApiModelProperty("数据")
     private T data;
 
     public ApiResponse(int code, String message, T data) {

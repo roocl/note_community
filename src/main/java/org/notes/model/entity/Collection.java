@@ -1,38 +1,29 @@
 package org.notes.model.entity;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.util.Date;
 
+@ApiModel("收藏夹")
 @Data
 public class Collection {
-    /*
-     * 收藏夹ID（主键）
-     */
+    @ApiModelProperty("收藏夹ID")
     private Integer collectionId;
 
-    /*
-     * 收藏夹名称
-     */
+    @ApiModelProperty("收藏夹名称")
     private String name;
 
-    /*
-     * 收藏夹描述
-     */
+    @ApiModelProperty("收藏夹描述")
     private String description;
 
-    /*
-     * 收藏夹创建者ID
-     */
+    @ApiModelProperty("创建者ID")
     private Long creatorId;
 
-    /*
-     * 创建时间
-     */
+    @ApiModelProperty("创建时间")
     private Date createdAt;
 
-    /*
-     * 更新时间
-     */
+    @ApiModelProperty("更新时间")
     private Date updatedAt;
 }

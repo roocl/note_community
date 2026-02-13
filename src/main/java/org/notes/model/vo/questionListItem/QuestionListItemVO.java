@@ -1,22 +1,19 @@
 package org.notes.model.vo.questionListItem;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import org.notes.model.vo.question.BaseQuestionVO;
 
+@ApiModel("题单项VO")
 @Data
 public class QuestionListItemVO {
-    /*
-     * 题单ID（联合主键）
-     */
+    @ApiModelProperty("题单ID")
     private Integer questionListId;
 
-    /*
-     * 题目ID（联合主键）
-     */
+    @ApiModelProperty("题目信息")
     private BaseQuestionVO question;
 
-    /*
-     * 题单内题目的顺序，从1开始
-     */
+    @ApiModelProperty("排序序号")
     private Integer rank;
 }

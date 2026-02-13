@@ -1,33 +1,26 @@
 package org.notes.model.entity;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.util.Date;
 
+@ApiModel("题单项")
 @Data
 public class QuestionListItem {
-    /*
-     * 题单ID（联合主键）
-     */
+    @ApiModelProperty("题单ID")
     private Integer questionListId;
 
-    /*
-     * 题目ID（联合主键）
-     */
+    @ApiModelProperty("题目ID")
     private Integer questionId;
 
-    /*
-     * 题单内题目的顺序，从1开始
-     */
+    @ApiModelProperty("题目排序序号")
     private Integer rank;
 
-    /*
-     * 创建时间
-     */
+    @ApiModelProperty("创建时间")
     private Date createdAt;
 
-    /*
-     * 更新时间
-     */
+    @ApiModelProperty("更新时间")
     private Date updatedAt;
 }

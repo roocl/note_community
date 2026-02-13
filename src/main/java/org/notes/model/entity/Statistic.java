@@ -1,48 +1,35 @@
 package org.notes.model.entity;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.time.LocalDate;
 
+@ApiModel("统计数据")
 @Data
 public class Statistic {
-    /**
-     * 主键 ID
-     */
+    @ApiModelProperty("主键ID")
     private Integer id;
 
-    /**
-     * 当天登录次数
-     */
+    @ApiModelProperty("当天登录次数")
     private Integer loginCount;
 
-    /**
-     * 当天注册人数
-     */
+    @ApiModelProperty("当天注册人数")
     private Integer registerCount;
 
-    /**
-     * 累计注册总人数
-     */
+    @ApiModelProperty("累计注册总人数")
     private Integer totalRegisterCount;
 
-    /**
-     * 当天笔记数量
-     */
+    @ApiModelProperty("当天笔记数量")
     private Integer noteCount;
 
-    /**
-     * 当天提交的笔记数量
-     */
+    @ApiModelProperty("当天提交的笔记数量")
     private Integer submitNoteCount;
 
-    /**
-     * 累计笔记总数量
-     */
+    @ApiModelProperty("累计笔记总数量")
     private Integer totalNoteCount;
 
-    /**
-     * 统计日期
-     */
+    @ApiModelProperty("统计日期")
     private LocalDate date;
 }

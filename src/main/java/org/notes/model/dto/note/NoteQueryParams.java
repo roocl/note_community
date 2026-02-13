@@ -1,78 +1,62 @@
 package org.notes.model.dto.note;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
+import javax.validation.constraints.AssertTrue;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
+import java.util.Arrays;
+import java.util.List;
 
+@ApiModel("笔记查询参数")
 @Data
 public class NoteQueryParams {
-    /*
-     * 问题ID
-     * 必须是正整数
-     */
-    @Min(value = 1, message = "问题ID必须是正整数")
-    private Integer questionId;
 
-    /*
-     * 作者ID
-     * 必须是正整数且符合系统生成的范围
-     */
-    @Min(value = 1, message = "作者ID必须是正整数")
-    private Long authorId;
+        @ApiModelProperty("题目ID")
+        private Integer questionId;
 
-    /*
-     * 收藏夹ID
-     * 必须是正整数
-     */
-    @Min(value = 1, message = "收藏夹ID必须是正整数")
-    private Integer collectionId;
+        @ApiModelProperty("作者ID")
+        private Long authorId;
 
-    /*
-     * 排序字段
-     * 只能是固定的枚举值（比如 "create", "update"）。
-     */
-    @Pattern(
-            regexp = "create",
-            message = "create"
-    )
-    private String sort;
+        @ApiModelProperty("收藏夹ID")
+        private Integer collectionId;
 
-    /*
-     * 排序方向
-     * 只能是 "asc" 或 "desc"，区分大小写。
-     */
-    @Pattern(
-            regexp = "asc|desc",
-            message = "排序方向必须是 asc 或 desc"
-    )
-    private String order;
+        @ApiModelProperty("排序字段")
+        private String sortBy;
 
-    /*
-     * 最近天数
-     * 必须是1到365之间的整数，默认限制为一年内。
-     */
-    @Min(value = 1, message = "最近天数必须至少为1天")
-    @Max(value = 365, message = "最近天数不能超过365天")
-    private Integer recentDays;
+        @ApiModelProperty("排序方向: asc 或 desc")
+        private String sortOrder;
 
-    /*
-     * 当前页码
-     * 必须是正整数，默认为1。
-     */
-    @NotNull(message = "当前页码不能为空")
-    @Min(value = 1, message = "当前页码必须大于等于1")
-    @Max(value = 10000, message = "当前页码不能超过10,000")
-    private Integer page = 1;
+        @ApiModelProperty(value = "页码", example = "1")
+        @Min(value = 1, message = "page 必须为正整数")
+        private Integer page = 1;
 
-    /*
-     * 每页大小
-     * 必须是正整数，限制范围在 1到100之间。
-     */
-    @NotNull(message = "每页大小不能为空")
-    @Min(value = 1, message = "每页大小必须大于等于1")
-    @Max(value = 200, message = "每页大小不能超过100")
-    private Integer pageSize = 10;
+        @ApiModelProperty(value = "每页大小", example = "10")
+        @Min(value = 1, message = "pageSize 必须为正整数")
+        @Max(value = 100, message = "pageSize 最大为 100")
+        private Integer pageSize = 10;
+
+        @ApiModelProperty("最近N天的笔记")
+        @Min(value = 1, message = "recentDays 必须为正整数")
+        @Max(value = 365, message = "recentDays 最大为 365")
+        private Integer recentDays;
+
+        @AssertTrue(message = "sortBy 不合法，仅允许: created_at, updated_at, like_count, comment_count, collect_count")
+        private boolean isValidSortBy() {
+                if (sortBy == null)
+                        return true;
+                List<String> allowedSortBy = Arrays.asList("created_at", "updated_at", "like_count", "comment_count",
+                                "collect_count");
+                return allowedSortBy.contains(sortBy);
+        }
+
+        @AssertTrue(message = "sortOrder 不合法，仅允许: asc, desc")
+        private boolean isValidSortOrder() {
+                if (sortOrder == null)
+                        return true;
+                List<String> allowedSortOrder = Arrays.asList("asc", "desc");
+                return allowedSortOrder.contains(sortOrder);
+        }
 }

@@ -1,28 +1,23 @@
 package org.notes.model.entity;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.util.Date;
 
+@ApiModel("笔记点赞")
 @Data
 public class NoteLike {
-    /*
-     * 笔记ID（联合主键）
-     */
+    @ApiModelProperty("笔记ID")
     private Integer noteId;
 
-    /*
-     * 点赞用户ID（联合主键）
-     */
+    @ApiModelProperty("点赞用户ID")
     private Long userId;
 
-    /*
-     * 创建时间
-     */
+    @ApiModelProperty("创建时间")
     private Date createdAt;
 
-    /*
-     * 更新时间
-     */
+    @ApiModelProperty("更新时间")
     private Date updatedAt;
 }

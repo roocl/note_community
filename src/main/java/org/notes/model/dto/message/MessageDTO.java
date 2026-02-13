@@ -1,46 +1,33 @@
 package org.notes.model.dto.message;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
+@ApiModel("消息DTO")
 @Data
 public class MessageDTO {
-    /**
-     * 消息ID
-     */
+    @ApiModelProperty("消息ID")
     private Integer messageId;
 
-    /**
-     * 接收者ID
-     */
+    @ApiModelProperty("接收者ID")
     private Long receiverId;
 
-    /**
-     * 发送者ID
-     */
+    @ApiModelProperty("发送者ID")
     private Long senderId;
 
-    /**
-     * 消息类型
-     */
+    @ApiModelProperty("消息类型")
     private Integer type;
 
-    /**
-     * 目标ID
-     */
+    @ApiModelProperty("目标ID")
     private Integer targetId;
 
-    /**
-     * 目标类型
-     */
+    @ApiModelProperty("目标类型")
     private Integer targetType;
 
-    /**
-     * 消息内容
-     */
+    @ApiModelProperty("消息内容")
     private String content;
 
-    /**
-     * 是否已读
-     */
+    @ApiModelProperty("是否已读")
     private Boolean isRead;
 }

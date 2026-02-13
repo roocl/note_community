@@ -1,28 +1,23 @@
 package org.notes.model.entity;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
+@ApiModel("评论点赞")
 @Data
 public class CommentLike {
-    /**
-     * 评论点赞ID
-     */
+    @ApiModelProperty("评论点赞ID")
     private Integer commentLikeId;
 
-    /**
-     * 评论ID
-     */
+    @ApiModelProperty("评论ID")
     private Integer commentId;
 
-    /**
-     * 用户ID
-     */
+    @ApiModelProperty("用户ID")
     private Long userId;
 
-    /**
-     * 创建时间
-     */
+    @ApiModelProperty("创建时间")
     private LocalDateTime createdAt;
 }

@@ -1,5 +1,7 @@
 package org.notes.controller;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.vo.upload.ImageVO;
 import org.notes.service.UploadService;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+@Api(tags = "文件上传")
 @RestController
 @RequestMapping("/api")
 public class UploadController {
@@ -17,9 +20,7 @@ public class UploadController {
     @Autowired
     private UploadService uploadService;
 
-    /**
-     * 上传图片
-     */
+    @ApiOperation("上传图片")
     @PostMapping("/upload/image")
     public ApiResponse<ImageVO> uploadImage(@RequestParam("file") MultipartFile file) {
         return uploadService.uploadImage(file);

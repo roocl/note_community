@@ -1,41 +1,35 @@
 package org.notes.model.vo.question;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.util.Date;
 
+@ApiModel("题目详情VO")
 @Data
 public class QuestionVO {
-    /**
-     * 问题 ID
-     */
+    @ApiModelProperty("问题ID")
     private Integer questionId;
-    /**
-     * 问题所属分类 ID
-     */
+
+    @ApiModelProperty("问题所属分类ID")
     private Integer categoryId;
-    /**
-     * 问题标题
-     */
+
+    @ApiModelProperty("问题标题")
     private String title;
-    /**
-     * 问题难度: 1=简单, 2=中等, 3=困难
-     */
+
+    @ApiModelProperty("问题难度: 1=简单, 2=中等, 3=困难")
     private Integer difficulty;
-    /**
-     * 题目考点
-     */
+
+    @ApiModelProperty("题目考点")
     private String examPoint;
-    /**
-     * 浏览量
-     */
+
+    @ApiModelProperty("浏览量")
     private Integer viewCount;
-    /**
-     * 记录创建时间
-     */
+
+    @ApiModelProperty("创建时间")
     private Date createdAt;
-    /**
-     * 记录更新时间
-     */
+
+    @ApiModelProperty("更新时间")
     private Date updatedAt;
 }

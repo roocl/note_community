@@ -1,5 +1,8 @@
 package org.notes.controller;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.category.CreateCategoryBody;
@@ -21,6 +24,7 @@ import java.util.List;
  * @author makejava
  * @since 2026-02-04 19:19:23
  */
+@Api(tags = "分类管理")
 @RestController
 @RequestMapping("/api")
 public class CategoryController {
@@ -28,46 +32,38 @@ public class CategoryController {
     @Autowired
     private CategoryService categoryService;
 
+    @ApiOperation("获取分类列表（用户端）")
     @GetMapping("/categories")
     public ApiResponse<List<CategoryVO>> userCategories() {
         return categoryService.categoryList();
     }
 
+    @ApiOperation("获取分类列表（管理端）")
     @GetMapping("/admin/categories")
     public ApiResponse<List<CategoryVO>> categories() {
         return categoryService.categoryList();
     }
 
-    /**
-     * 新增数据
-     *
-     * @param createCategoryBody 实体
-     * @return 新增结果
-     */
+    @ApiOperation("新增分类")
     @PostMapping("/admin/categories")
     public ApiResponse<CreateCategoryVO> createCategory(
             @Valid @RequestBody CreateCategoryBody createCategoryBody) {
         return categoryService.createCategory(createCategoryBody);
     }
 
+    @ApiOperation("更新分类")
     @PatchMapping("/admin/categories/{categoryId}")
     public ApiResponse<EmptyVO> updateCategory(
-            @Min(value = 1, message = "categoryId 必须为正整数") @PathVariable Integer categoryId,
+            @ApiParam("分类ID") @Min(value = 1, message = "categoryId 必须为正整数") @PathVariable Integer categoryId,
             @Valid @RequestBody UpdateCategoryBody updateCategoryBody) {
         return categoryService.updateCategory(categoryId, updateCategoryBody);
     }
 
-    /**
-     * 删除数据
-     *
-     * @param categoryId 主键
-     * @return 删除是否成功
-     */
+    @ApiOperation("删除分类")
     @DeleteMapping("/admin/categories/{categoryId}")
     public ApiResponse<EmptyVO> deleteCategory(
-            @Min(value = 1, message = "categoryId 必须为正整数") @PathVariable Integer categoryId) {
+            @ApiParam("分类ID") @Min(value = 1, message = "categoryId 必须为正整数") @PathVariable Integer categoryId) {
         return categoryService.deleteCategory(categoryId);
     }
 
 }
-

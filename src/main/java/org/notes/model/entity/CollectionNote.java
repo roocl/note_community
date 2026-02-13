@@ -1,28 +1,23 @@
 package org.notes.model.entity;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.util.Date;
 
+@ApiModel("收藏夹笔记关联")
 @Data
 public class CollectionNote {
-    /*
-     * 收藏夹ID（联合主键）
-     */
+    @ApiModelProperty("收藏夹ID")
     private Integer collectionId;
 
-    /*
-     * 笔记ID（联合主键）
-     */
+    @ApiModelProperty("笔记ID")
     private Integer noteId;
 
-    /*
-     * 创建时间
-     */
+    @ApiModelProperty("创建时间")
     private Date createdAt;
 
-    /*
-     * 更新时间
-     */
+    @ApiModelProperty("更新时间")
     private Date updatedAt;
 }

@@ -1,53 +1,38 @@
 package org.notes.model.entity;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
+@ApiModel("评论")
 @Data
 public class Comment {
-    /**
-     * 评论ID
-     */
+    @ApiModelProperty("评论ID")
     private Integer commentId;
 
-    /**
-     * 笔记ID
-     */
+    @ApiModelProperty("笔记ID")
     private Integer noteId;
 
-    /**
-     * 作者ID
-     */
+    @ApiModelProperty("作者ID")
     private Long authorId;
 
-    /**
-     * 父评论ID
-     */
+    @ApiModelProperty("父评论ID")
     private Integer parentId;
 
-    /**
-     * 评论内容
-     */
+    @ApiModelProperty("评论内容")
     private String content;
 
-    /**
-     * 点赞数
-     */
+    @ApiModelProperty("点赞数")
     private Integer likeCount;
 
-    /**
-     * 回复数
-     */
+    @ApiModelProperty("回复数")
     private Integer replyCount;
 
-    /**
-     * 创建时间
-     */
+    @ApiModelProperty("创建时间")
     private LocalDateTime createdAt;
 
-    /**
-     * 更新时间
-     */
+    @ApiModelProperty("更新时间")
     private LocalDateTime updatedAt;
 }
