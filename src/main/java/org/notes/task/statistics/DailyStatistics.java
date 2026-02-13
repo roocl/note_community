@@ -14,7 +14,6 @@ import java.time.LocalDate;
 @Log4j2
 @Component
 public class DailyStatistics {
-    //todo 修复search和statistics
     @Autowired
     UserMapper userMapper;
 

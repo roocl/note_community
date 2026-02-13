@@ -2,12 +2,15 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.notes.annotation.NeedLogin;
+import org.notes.mapper.CommentMapper;
 import org.notes.mapper.MessageMapper;
+import org.notes.mapper.NoteMapper;
+import org.notes.mapper.QuestionMapper;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.message.MessageDTO;
-import org.notes.model.entity.Message;
-import org.notes.model.entity.User;
+import org.notes.model.entity.*;
+import org.notes.model.enums.message.MessageTargetType;
 import org.notes.model.enums.message.MessageType;
 import org.notes.model.vo.message.MessageVO;
 import org.notes.scope.RequestScopeData;
@@ -29,6 +32,12 @@ public class MessageServiceImpl implements MessageService {
     private final UserService userService;
 
     private final RequestScopeData requestScopeData;
+
+    private final NoteMapper noteMapper;
+
+    private final QuestionMapper questionMapper;
+
+    private final CommentMapper commentMapper;
 
     @Override
     public Integer createMessage(MessageDTO messageDTO) {
@@ -66,9 +75,26 @@ public class MessageServiceImpl implements MessageService {
 
             if (!Objects.equals(message.getType(), MessageType.SYSTEM)) {
                 MessageVO.Target target = new MessageVO.Target();
-                target.setTargetId(message.getTargetId());
-                target.setTargetType(message.getTargetType());
-                //todo 获取questionSummary
+                Integer targetId = message.getTargetId();
+                Integer targetType = message.getTargetType();
+                target.setTargetId(targetId);
+                target.setTargetType(targetType);
+
+                MessageVO.QuestionSummary questionSummary = new MessageVO.QuestionSummary();
+                Integer noteId;
+                if (Objects.equals(targetType, MessageTargetType.COMMENT)) {
+                    Comment comment = commentMapper.findById(targetId);
+                    noteId = comment.getNoteId();
+                } else {
+                    noteId = targetId;
+                }
+
+                Note note = noteMapper.findById(noteId);
+                Question question = questionMapper.findById(note.getQuestionId());
+                questionSummary.setQuestionId(question.getQuestionId());
+                questionSummary.setTitle(question.getTitle());
+
+                target.setQuestionSummary(questionSummary);
                 messageVO.setTarget(target);
             }
 

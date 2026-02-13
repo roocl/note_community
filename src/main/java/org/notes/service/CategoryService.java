@@ -30,7 +30,5 @@ public interface CategoryService {
 
     ApiResponse<EmptyVO> updateCategory(Integer categoryId, UpdateCategoryBody updateCategoryBody);
 
-    Category findOrCreateCategory(String categoryName);
-
     Category findOrCreateCategory(String categoryName, Integer parentCategoryId);
 }

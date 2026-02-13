@@ -20,6 +20,7 @@ import org.notes.scope.RequestScopeData;
 import org.notes.service.*;
 import org.notes.utils.ApiResponseUtil;
 import org.notes.utils.PaginationUtils;
+import org.notes.utils.SearchUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
@@ -128,6 +129,8 @@ public class NoteServiceImpl implements NoteService {
         Note note = new Note();
         BeanUtils.copyProperties(request, note);
         note.setAuthorId(userId);
+        String processedVector = SearchUtils.preprocessKeyword(request.getContent());
+        note.setSearchVector(processedVector);
 
         try {
             noteMapper.insert(note);
@@ -152,7 +155,11 @@ public class NoteServiceImpl implements NoteService {
         }
 
         try {
-            note.setContent(request.getContent());
+            String content = request.getContent();
+            String processedVector = SearchUtils.preprocessKeyword(content);
+            note.setContent(content);
+            note.setSearchVector(processedVector);
+
             noteMapper.update(note);
             return ApiResponseUtil.success("更新笔记成功");
         } catch (Exception e) {

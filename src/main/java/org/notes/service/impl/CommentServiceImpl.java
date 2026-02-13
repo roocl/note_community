@@ -277,10 +277,8 @@ public class CommentServiceImpl implements CommentService {
             messageDTO.setReceiverId(comment.getAuthorId());
             messageDTO.setSenderId(userId);
             messageDTO.setType(MessageType.LIKE);
-            //todo message数据库修改
             messageDTO.setTargetId(commentId);
-            //todo 区分回复笔记或评论
-            messageDTO.setTargetType(MessageTargetType.NOTE);
+            messageDTO.setTargetType(MessageTargetType.COMMENT);
             messageDTO.setIsRead(false);
 
             messageService.createMessage(messageDTO);

@@ -72,8 +72,8 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="noteId">
-        INSERT INTO note (question_id, author_id, content)
-        VALUES (#{questionId}, #{authorId}, #{content})
+        INSERT INTO note (question_id, author_id, content, search_vector)
+        VALUES (#{questionId}, #{authorId}, #{content}, #{searchVector})
     </insert>
 
     <resultMap id="BaseResultMap" type="org.notes.model.entity.Note">
@@ -94,7 +94,7 @@
 
     <update id="update">
         UPDATE note
-        SET content = #{content}
+        SET content = #{content}, search_vector = #{searchVector}
         WHERE note_id = #{noteId}
     </update>
 
@@ -161,9 +161,6 @@
         <result property="rank" column="note_rank"/>
     </resultMap>
 
-    <!-- sql 复杂度较高，导致使用 IDEA 的 command + option + L 格式化时，
-         COUNT 函数和 DATE 函数前后会被自动加上空格，这将导致 sql 语法错误
-         切记切记这段 sql 不要使用 IDEA 进行自动格式化！！！-->
     <select id="submitNoteHeatMap" resultMap="submitNoteHeatMapMap">
         WITH DailyNoteCounts AS (
             SELECT author_id,
@@ -279,7 +276,7 @@
     </select>
 
     <!-- 根据标签搜索笔记 -->
-    <select id="searchNotesByTag" resultType="org.notes.model.entity.Note">
+    <!--<select id="searchNotesByTag" resultType="org.notes.model.entity.Note">
         SELECT DISTINCT
             n.*,
             MATCH(n.search_vector) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE) as relevance
@@ -291,6 +288,6 @@
            OR t.name LIKE CONCAT('%', #{tag}, '%')
         ORDER BY relevance DESC
         LIMIT #{limit} OFFSET #{offset}
-    </select>
+    </select>-->
 
 </mapper>

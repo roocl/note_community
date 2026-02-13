@@ -93,7 +93,7 @@ public class SearchServiceImpl implements SearchService {
         }
     }
 
-    @Override
+    /*@Override
     public ApiResponse<List<Note>> searchNotesByTag(String keyword, String tag, int page, int pageSize) {
         try {
             String cacheKey = String.format(NOTE_TAG_SEARCH_CACHE_KEY, keyword, tag, page, pageSize);
@@ -121,5 +121,5 @@ public class SearchServiceImpl implements SearchService {
             log.error("搜索笔记失败", e);
             return ApiResponseUtil.error("搜索失败");
         }
-    }
+    }*/
 }

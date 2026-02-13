@@ -36,5 +36,5 @@ public interface SearchService {
      * @param pageSize 每页大小
      * @return 笔记列表
      */
-    ApiResponse<List<Note>> searchNotesByTag(String keyword, String tag, int page, int pageSize);
+//    ApiResponse<List<Note>> searchNotesByTag(String keyword, String tag, int page, int pageSize);
 }

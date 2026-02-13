@@ -42,7 +42,8 @@ public class SearchController {
         return searchService.searchUsers(keyword, page, pageSize);
     }
 
-    @ApiOperation("按标签搜索笔记")
+    //废弃接口
+    /*@ApiOperation("按标签搜索笔记")
     @GetMapping("/notes/tag")
     public ApiResponse<List<Note>> searchNotesByTag(
             @ApiParam("搜索关键词") @RequestParam String keyword,
@@ -50,5 +51,5 @@ public class SearchController {
             @ApiParam("页码") @RequestParam(defaultValue = "1") @Min(1) Integer page,
             @ApiParam("每页大小") @RequestParam(defaultValue = "20") @Min(1) Integer pageSize) {
         return searchService.searchNotesByTag(keyword, tag, page, pageSize);
-    }
+    }*/
 }

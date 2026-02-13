@@ -130,26 +130,6 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public Category findOrCreateCategory(String categoryName) {
-        //todo 将两个方法合并?
-        Category category = categoryMapper.findByName(categoryName);
-
-        if (category != null) {
-            return category;
-        }
-
-        try {
-            Category newCategory = new Category();
-            newCategory.setName(categoryName.trim());
-            newCategory.setParentCategoryId(0);
-            categoryMapper.insert(newCategory);
-            return newCategory;
-        } catch (Exception e) {
-            throw new RuntimeException("创建分类失败");
-        }
-    }
-
-    @Override
     public Category findOrCreateCategory(String categoryName, Integer parentCategoryId) {
         Category category = categoryMapper.findByName(categoryName);
 
@@ -160,7 +140,7 @@ public class CategoryServiceImpl implements CategoryService {
         try {
             Category newCategory = new Category();
             newCategory.setName(categoryName.trim());
-            newCategory.setParentCategoryId(parentCategoryId);
+            newCategory.setParentCategoryId(parentCategoryId != null ? parentCategoryId : 0);
             categoryMapper.insert(newCategory);
             return newCategory;
         } catch (Exception e) {

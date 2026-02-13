@@ -21,6 +21,9 @@ public class Note {
     @ApiModelProperty("笔记内容")
     private String content;
 
+    @ApiModelProperty("搜索向量")
+    private String searchVector;
+
     @ApiModelProperty("点赞数")
     private Integer likeCount;
 

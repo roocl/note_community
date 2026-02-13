@@ -200,8 +200,8 @@ public interface NoteMapper {
      * @param offset 偏移量
      * @return 笔记列表
      */
-    List<Note> searchNotesByTag(@Param("keyword") String keyword,
+    /*List<Note> searchNotesByTag(@Param("keyword") String keyword,
                                 @Param("tag") String tag,
                                 @Param("limit") int limit,
-                                @Param("offset") int offset);
+                                @Param("offset") int offset);*/
 }
