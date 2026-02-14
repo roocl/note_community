@@ -19,8 +19,15 @@ public interface CollectionNoteMapper {
             @Param("noteId") Integer noteId,
             @Param("collectionIds") List<Integer> collectionIds);
 
+    List<Integer> findNoteIdsByCollectionId(@Param("collectionId") Integer collectionId);
+
+    CollectionNote findByCollectionIdAndNoteId(
+            @Param("collectionId") Integer collectionId,
+            @Param("noteId") Integer noteId);
 
     int insert(CollectionNote collectionNote);
+
+    int delete(CollectionNote collectionNote);
 
     int deleteByCollectionId(@Param("collectionId") Integer collectionId);
 

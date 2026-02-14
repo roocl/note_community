@@ -30,6 +30,14 @@ public interface NoteMapper {
     Note findById(@Param("noteId") Integer noteId);
 
     /**
+     * 根据笔记ID列表批量查询笔记
+     *
+     * @param noteIds 笔记ID列表
+     * @return 对应的笔记列表
+     */
+    List<Note> findByIds(@Param("noteIds") List<Integer> noteIds);
+
+    /**
      * 根据查询参数获取笔记列表
      *
      * @param params 查询参数，用于过滤笔记
@@ -38,8 +46,8 @@ public interface NoteMapper {
      * @return 笔记列表，返回符合查询条件的笔记
      */
     List<Note> findByQueryParams(@Param("params") NoteQueryParams params,
-                                 @Param("offset") int offset,
-                                 @Param("limit") int limit);
+            @Param("offset") int offset,
+            @Param("limit") int limit);
 
     /**
      * 根据用户ID和问题ID查询笔记
@@ -49,15 +57,15 @@ public interface NoteMapper {
      * @return 返回匹配的笔记对象，如果找不到匹配的笔记，则返回 null
      */
     Note findByAuthorIdAndQuestionId(@Param("authorId") Long authorId,
-                                     @Param("questionId") Integer questionId);
+            @Param("questionId") Integer questionId);
 
     /**
      * 根据用户ID查询笔记列表
+     * 
      * @param authorId 用户ID
      * @return 用户创建的笔记列表
      */
     List<Note> findByAuthorId(@Param("authorId") Long authorId);
-
 
     /**
      * 根据用户ID和问题ID列表，过滤出用户已完成的问题ID列表
@@ -67,7 +75,7 @@ public interface NoteMapper {
      * @return 用户已完成的问题ID列表，如果用户未完成任何问题，则返回空集合
      */
     Set<Integer> filterFinishedQuestionIdsByUser(@Param("authorId") Long authorId,
-                                                 @Param("questionIds") List<Integer> questionIds);
+            @Param("questionIds") List<Integer> questionIds);
 
     /**
      * 插入一条新的笔记
@@ -155,12 +163,14 @@ public interface NoteMapper {
 
     /**
      * 当日提交笔记人数
+     * 
      * @return 当日提交笔记人数
      */
     int getTodaySubmitNoteUserCount();
 
     /**
      * 笔记总数
+     * 
      * @return 笔记总数
      */
     int getTotalNoteCount();
@@ -183,25 +193,30 @@ public interface NoteMapper {
      * 搜索笔记
      *
      * @param keyword 关键词
-     * @param limit 限制数量
-     * @param offset 偏移量
+     * @param limit   限制数量
+     * @param offset  偏移量
      * @return 笔记列表
      */
     List<Note> searchNotes(@Param("keyword") String keyword,
-                           @Param("limit") int limit,
-                           @Param("offset") int offset);
+            @Param("limit") int limit,
+            @Param("offset") int offset);
 
     /**
      * 根据标签搜索笔记
      *
      * @param keyword 关键词
-     * @param tag 标签
-     * @param limit 限制数量
-     * @param offset 偏移量
+     * @param tag     标签
+     * @param limit   限制数量
+     * @param offset  偏移量
      * @return 笔记列表
      */
-    /*List<Note> searchNotesByTag(@Param("keyword") String keyword,
-                                @Param("tag") String tag,
-                                @Param("limit") int limit,
-                                @Param("offset") int offset);*/
+    /*
+     * List<Note> searchNotesByTag(@Param("keyword") String keyword,
+     * 
+     * @Param("tag") String tag,
+     * 
+     * @Param("limit") int limit,
+     * 
+     * @Param("offset") int offset);
+     */
 }

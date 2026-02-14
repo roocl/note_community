@@ -3,33 +3,19 @@ package org.notes.model.dto.collection;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import org.hibernate.validator.constraints.Length;
 
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
+import javax.validation.constraints.*;
 
-@ApiModel("批量修改收藏夹请求")
+@ApiModel("修改收藏夹请求")
 @Data
 public class UpdateCollectionBody {
-    @ApiModelProperty("笔记ID")
-    @Min(value = 1, message = "noteId 必须为正整数")
-    private Integer noteId;
+    @ApiModelProperty(value = "收藏夹名称")
+    @Length(max = 32, message = "name 长度不能超过 32")
+    private String name;
 
-    @ApiModelProperty("收藏夹操作列表")
-    private UpdateItem[] collections;
 
-    @ApiModel("收藏夹操作项")
-    @Data
-    public static class UpdateItem {
-        @ApiModelProperty("收藏夹ID")
-        @Min(value = 1, message = "collectionId 必须为正整数")
-        private Integer collectionId;
-
-        @ApiModelProperty(value = "操作类型: create 或 delete", required = true)
-        @NotNull(message = "action 不能为空")
-        @NotEmpty(message = "action 不能为空")
-        @Pattern(regexp = "create|delete", message = "action 必须为 create 或者 delete")
-        private String action;
-    }
+    @ApiModelProperty(value = "笔记内容")
+    @Length(max = 32, message = "name 长度不能超过 255")
+    private String description;
 }

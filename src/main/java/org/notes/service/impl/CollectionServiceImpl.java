@@ -11,7 +11,6 @@ import org.notes.model.dto.collection.CollectionQueryParams;
 import org.notes.model.dto.collection.CreateCollectionBody;
 import org.notes.model.dto.collection.UpdateCollectionBody;
 import org.notes.model.entity.Collection;
-import org.notes.model.entity.CollectionNote;
 import org.notes.model.vo.collection.CollectionVO;
 import org.notes.model.vo.collection.CreateCollectionVO;
 import org.notes.scope.RequestScopeData;
@@ -19,7 +18,6 @@ import org.notes.service.CollectionService;
 import org.notes.utils.ApiResponseUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -93,6 +91,30 @@ public class CollectionServiceImpl implements CollectionService {
 
     @Override
     @NeedLogin
+    public ApiResponse<EmptyVO> updateCollection(Integer collectionId, UpdateCollectionBody requestBody) {
+        Long creatorId = requestScopeData.getUserId();
+        Collection collection = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
+
+        if (collection == null) {
+            return ApiResponseUtil.error("收藏夹不存在或者没有权限修改");
+        }
+
+        try {
+            String name = requestBody.getName();
+            String description = requestBody.getDescription();
+            collection.setName(name);
+            collection.setDescription(description);
+
+            collectionMapper.update(collection);
+
+            return ApiResponseUtil.success("修改收藏夹成功");
+        } catch (Exception e) {
+            return ApiResponseUtil.error("修改收藏夹失败");
+        }
+    }
+
+    @Override
+    @NeedLogin
     public ApiResponse<EmptyVO> deleteCollection(Integer collectionId) {
         Long creatorId = requestScopeData.getUserId();
         Collection collection = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
@@ -111,52 +133,4 @@ public class CollectionServiceImpl implements CollectionService {
         }
     }
 
-    //todo 移到collectionNote?
-    @Override
-    @NeedLogin
-    @Transactional
-    public ApiResponse<EmptyVO> batchModifyCollection(UpdateCollectionBody requestBody) {
-        Long creatorId = requestScopeData.getUserId();
-        Integer noteId = requestBody.getNoteId();
-
-        UpdateCollectionBody.UpdateItem[] collections = requestBody.getCollections();
-
-        for (UpdateCollectionBody.UpdateItem collection : collections) {
-            Integer collectionId = collection.getCollectionId();
-            String action = collection.getAction();
-
-            Collection collectionEntity = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
-
-            if (collectionEntity == null) {
-                return ApiResponseUtil.error("收藏夹不存在或者没有权限修改");
-            }
-
-            if (Objects.equals(action, "create")) {
-                try {
-                    if (collectionMapper.countByCreatorIdAndNoteId(creatorId, noteId) == 0) {
-                        noteMapper.collectNote(noteId);
-                    }
-
-                    CollectionNote collectionNote = new CollectionNote();
-                    collectionNote.setCollectionId(collectionId);
-                    collectionNote.setNoteId(noteId);
-                    collectionNoteMapper.insert(collectionNote);
-                } catch (Exception e) {
-                    return ApiResponseUtil.error("收藏失败");
-                }
-
-                if (Objects.equals(action, "delete")) {
-                    try {
-                        collectionNoteMapper.deleteByCollectionIdAndNoteId(collectionId, noteId);
-                        if (collectionMapper.countByCreatorIdAndNoteId(creatorId, noteId) == 0) {
-                            noteMapper.unCollectNote(noteId);
-                        }
-                    } catch (Exception e) {
-                        return ApiResponseUtil.error("取消收藏失败");
-                    }
-                }
-            }
-        }
-        return ApiResponseUtil.success("操作成功");
-    }
 }

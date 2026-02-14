@@ -18,8 +18,8 @@ public interface CollectionService {
 
     ApiResponse<CreateCollectionVO> createCollection(CreateCollectionBody requestBody);
 
-    ApiResponse<EmptyVO> deleteCollection(Integer collectionId);
+    ApiResponse<EmptyVO> updateCollection(Integer collectionId, UpdateCollectionBody requestBody);
 
-    ApiResponse<EmptyVO> batchModifyCollection(UpdateCollectionBody requestBody);
+    ApiResponse<EmptyVO> deleteCollection(Integer collectionId);
 }
 

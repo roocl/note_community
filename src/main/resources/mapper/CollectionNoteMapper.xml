@@ -35,10 +35,42 @@
         </if>
     </select>
 
+    <resultMap id="CollectionNote" type="org.notes.model.entity.CollectionNote">
+        <id property="collectionId" column="collection_id" />
+        <id property="noteId" column="note_id" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+
+    <select id="findByCollectionIdAndNoteId" resultType="org.notes.model.entity.CollectionNote">
+        SELECT *
+        FROM collection_note
+        WHERE collection_id = #{collectionId}
+          AND note_id = #{noteId}
+    </select>
+
+    <select id="findNoteIdsByCollectionId" resultType="integer">
+        <if test="collectionId != null">
+            SELECT note_id
+            FROM collection_note
+            WHERE collection_id = #{collectionId}
+        </if>
+        <if test="collectionId == null">
+            SELECT note_id FROM collection_note WHERE 1 = 0
+        </if>
+    </select>
+
     <insert id="insert">
         INSERT INTO collection_note (collection_id, note_id)
         VALUES (#{collectionId}, #{noteId})
     </insert>
+
+    <delete id="delete">
+        DELETE
+        FROM collection_note
+        WHERE collection_id = #{collectionId}
+          AND note_id = #{noteId}
+    </delete>
 
     <delete id="deleteByCollectionId">
         DELETE

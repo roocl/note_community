@@ -92,6 +92,18 @@
         SELECT * FROM note WHERE note_id = #{noteId}
     </select>
 
+    <select id="findByIds" resultMap="BaseResultMap">
+        <if test="noteIds != null and noteIds.size > 0">
+            SELECT * FROM note WHERE note_id IN
+            <foreach collection="noteIds" item="noteId" open="(" separator="," close=")">
+                #{noteId}
+            </foreach>
+        </if>
+        <if test="noteIds == null or noteIds.size == 0">
+            SELECT * FROM note WHERE 1 = 0
+        </if>
+    </select>
+
     <update id="update">
         UPDATE note
         SET content = #{content}, search_vector = #{searchVector}

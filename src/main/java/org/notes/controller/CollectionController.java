@@ -40,17 +40,18 @@ public class CollectionController {
         return collectionService.createCollection(requestBody);
     }
 
+    @ApiOperation("修改收藏夹")
+    @PatchMapping("/collections/{collectionId}")
+    public ApiResponse<EmptyVO> updateCollection(
+            @ApiParam("收藏夹ID") @Min(value = 1, message = "collectionId 必须为正整数") @PathVariable Integer collectionId,
+            @Valid @RequestBody UpdateCollectionBody updateBody) {
+        return collectionService.updateCollection(collectionId, updateBody);
+    }
+
     @ApiOperation("删除收藏夹")
     @DeleteMapping("/collections/{collectionId}")
     public ApiResponse<EmptyVO> deleteCollection(
             @ApiParam("收藏夹ID") @PathVariable @Min(value = 1, message = "collectionId 必须为正整数") Integer collectionId) {
         return collectionService.deleteCollection(collectionId);
-    }
-
-    @ApiOperation("批量修改收藏夹")
-    @PostMapping("/collections/batch")
-    public ApiResponse<EmptyVO> batchModifyCollection(
-            @Valid @RequestBody UpdateCollectionBody collectionBody) {
-        return collectionService.batchModifyCollection(collectionBody);
     }
 }
