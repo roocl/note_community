@@ -1,7 +1,7 @@
 package org.notes.service;
 
 public interface EmailService {
-    String sendVerificationCode(String email);
+    void sendVerificationCode(String email);
 
     boolean checkVerificationCode(String email, String code);
 

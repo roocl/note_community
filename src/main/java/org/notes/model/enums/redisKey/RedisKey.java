@@ -8,8 +8,4 @@ public class RedisKey {
     public static String registerVerificationLimitCode(String email) {
         return "email:register_verification_code:limit:" + email;
     }
-
-    public static String emailTaskQueue() {
-        return "queue:email:task";
-    }
 }

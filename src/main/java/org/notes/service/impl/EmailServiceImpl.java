@@ -1,12 +1,12 @@
 package org.notes.service.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.notes.config.RabbitMQConfig;
 import org.notes.model.enums.redisKey.RedisKey;
 import org.notes.service.EmailService;
 import org.notes.task.email.EmailTask;
 import org.notes.utils.RandomCodeUtil;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,19 +17,22 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
 
-    private final ObjectMapper objectMapper;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
+
+    @Value("${mail.verify-code.expire-minutes}")
+    private int expireMinutes;
 
     @Value("${mail.verify-code.limit-expire-seconds}")
     private int limitExpireSeconds;
 
     @Override
-    public String sendVerificationCode(String email) {
+    public void sendVerificationCode(String email) {
         // 检查发送频率
         if (isVerificationCodeRateLimited(email)) {
             throw new RuntimeException("验证码发送太频繁，请60秒后重试");
@@ -40,26 +43,24 @@ public class EmailServiceImpl implements EmailService {
 
         // 实现异步发送邮件的逻辑
         try {
-            // 创建邮件任务
+            // 构造对象
             EmailTask emailTask = new EmailTask();
-
-            // 初始化邮件任务内容
             emailTask.setEmail(email);
             emailTask.setCode(verificationCode);
             emailTask.setTimestamp(System.currentTimeMillis());
 
-            // 将邮件任务存入消息队列
-            // 1. 将任务对象转成JSON字符串
-            // 2. 将JSON字符串保存到Redis模拟的消息队列中
-            String emailTaskJson = objectMapper.writeValueAsString(emailTask);
-            String queueKey = RedisKey.emailTaskQueue();
-            redisTemplate.opsForList().leftPush(queueKey, emailTaskJson);
+            // 发送消息到rabbitmq
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EMAIL_QUEUE, emailTask);
 
-            // 设置 email 发送注册验证码的限制
-            String emailLimitKey = RedisKey.registerVerificationLimitCode(email);
-            redisTemplate.opsForValue().set(emailLimitKey, "1", limitExpireSeconds, TimeUnit.SECONDS);
+            // 将验证码存入redis，供注册时校验
+            String codeKey = RedisKey.registerVerificationCode(email);
+            redisTemplate.opsForValue().set(codeKey, verificationCode, expireMinutes, TimeUnit.MINUTES);
 
-            return verificationCode;
+            // 设置发送频率限制标记
+            String limitKey = RedisKey.registerVerificationLimitCode(email);
+            redisTemplate.opsForValue().set(limitKey, "1", limitExpireSeconds, TimeUnit.SECONDS);
+
+            log.info("验证码邮件任务已发送到RabbitMQ，邮箱：{}", email);
         } catch (Exception e) {
             log.error("发送验证码邮件失败", e);
             throw new RuntimeException("发送验证码失败，请稍后重试");
