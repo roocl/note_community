@@ -2,124 +2,121 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.notes.mapper.NoteMapper;
-import org.notes.mapper.UserMapper;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.notes.model.base.ApiResponse;
-import org.notes.model.entity.Note;
-import org.notes.model.entity.User;
+import org.notes.model.es.NoteDocument;
+import org.notes.model.es.UserDocument;
+import org.notes.model.vo.search.NoteSearchVO;
+import org.notes.model.vo.search.UserSearchVO;
 import org.notes.service.SearchService;
 import org.notes.utils.ApiResponseUtil;
-import org.notes.utils.SearchUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
 @Log4j2
 @Service
 @RequiredArgsConstructor
 public class SearchServiceImpl implements SearchService {
 
-    @Autowired
-    private NoteMapper noteMapper;
-
-    @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-
-    private static final String NOTE_SEARCH_CACHE_KEY = "search:note:%s:%d:%d";
-    private static final String USER_SEARCH_CACHE_KEY = "search:user:%s:%d:%d";
-    private static final String NOTE_TAG_SEARCH_CACHE_KEY = "search:note:tag:%s:%s:%d:%d";
-    private static final long CACHE_EXPIRE_TIME = 30; // 分钟
+    private final ElasticsearchOperations elasticsearchOperations;
 
     @Override
-    public ApiResponse<List<Note>> searchNotes(String keyword, int page, int pageSize) {
+    public ApiResponse<List<NoteSearchVO>> searchNotes(String keyword, int page, int pageSize) {
         try {
-            String cacheKey = String.format(NOTE_SEARCH_CACHE_KEY, keyword, page, pageSize);
+            // 构建高亮
+            HighlightBuilder highlightBuilder = new HighlightBuilder();
+            highlightBuilder.field(new HighlightBuilder.Field("content")
+                    .preTags("<em>")
+                    .postTags("</em>")
+                    .fragmentSize(200)
+                    .numOfFragments(1));
 
-            // 尝试从缓存获取
-            List<Note> cachedResult = (List<Note>) redisTemplate.opsForValue().get(cacheKey);
-            if (cachedResult != null) {
-                return ApiResponseUtil.success("搜索成功", cachedResult);
-            }
+            // 构建查询
+            NativeSearchQuery query = new NativeSearchQueryBuilder()
+                    .withQuery(QueryBuilders.matchQuery("content", keyword))
+                    .withHighlightBuilder(highlightBuilder)
+                    .withPageable(PageRequest.of(page - 1, pageSize))
+                    .build();
 
-            // 处理关键词
-            keyword = SearchUtils.preprocessKeyword(keyword);
+            SearchHits<NoteDocument> searchHits = elasticsearchOperations.search(query, NoteDocument.class);
 
-            // 计算偏移量
-            int offset = (page - 1) * pageSize;
+            List<NoteSearchVO> results = searchHits.getSearchHits().stream().map(hit -> {
+                NoteSearchVO vo = new NoteSearchVO();
+                BeanUtils.copyProperties(hit.getContent(), vo);
 
-            // 执行搜索
-            List<Note> notes = noteMapper.searchNotes(keyword, pageSize, offset);
+                // 用高亮内容替换原始内容
+                Map<String, List<String>> highlightFields = hit.getHighlightFields();
+                if (highlightFields.containsKey("content") && !highlightFields.get("content").isEmpty()) {
+                    vo.setContent(highlightFields.get("content").get(0));
+                }
 
-            // 存入缓存
-            redisTemplate.opsForValue().set(cacheKey, notes, CACHE_EXPIRE_TIME, TimeUnit.MINUTES);
+                return vo;
+            }).toList();
 
-            return ApiResponseUtil.success("搜索成功", notes);
+            return ApiResponseUtil.success("搜索成功", results);
         } catch (Exception e) {
             log.error("搜索笔记失败", e);
-            return ApiResponseUtil.error("搜索失败");
+            return ApiResponseUtil.error("搜索失败: " + e.getMessage());
         }
     }
 
     @Override
-    public ApiResponse<List<User>> searchUsers(String keyword, int page, int pageSize) {
+    public ApiResponse<List<UserSearchVO>> searchUsers(String keyword, int page, int pageSize) {
         try {
-            String cacheKey = String.format(USER_SEARCH_CACHE_KEY, keyword, page, pageSize);
+            // 构建高亮
+            HighlightBuilder highlightBuilder = new HighlightBuilder();
+            highlightBuilder.field(new HighlightBuilder.Field("username")
+                    .preTags("<em>")
+                    .postTags("</em>"));
+            highlightBuilder.field(new HighlightBuilder.Field("school")
+                    .preTags("<em>")
+                    .postTags("</em>"));
+            highlightBuilder.field(new HighlightBuilder.Field("signature")
+                    .preTags("<em>")
+                    .postTags("</em>"));
 
-            // 尝试从缓存获取
-            List<User> cachedResult = (List<User>) redisTemplate.opsForValue().get(cacheKey);
-            if (cachedResult != null) {
-                return ApiResponseUtil.success("搜索成功", cachedResult);
-            }
+            // 构建查询：multi_match 搜索 username、account、email、school、signature
+            NativeSearchQuery query = new NativeSearchQueryBuilder()
+                    .withQuery(QueryBuilders.multiMatchQuery(keyword,
+                            "username", "account", "email", "school", "signature"))
+                    .withHighlightBuilder(highlightBuilder)
+                    .withPageable(PageRequest.of(page - 1, pageSize))
+                    .build();
 
-            // 计算偏移量
-            int offset = (page - 1) * pageSize;
+            SearchHits<UserDocument> searchHits = elasticsearchOperations.search(query, UserDocument.class);
 
-            // 执行搜索
-            List<User> users = userMapper.searchUsers(keyword, pageSize, offset);
+            List<UserSearchVO> results = searchHits.getSearchHits().stream().map(hit -> {
+                UserSearchVO vo = new UserSearchVO();
+                BeanUtils.copyProperties(hit.getContent(), vo);
 
-            // 存入缓存
-            redisTemplate.opsForValue().set(cacheKey, users, CACHE_EXPIRE_TIME, TimeUnit.MINUTES);
+                // 用高亮内容替换原始字段
+                Map<String, List<String>> highlightFields = hit.getHighlightFields();
+                if (highlightFields.containsKey("username") && !highlightFields.get("username").isEmpty()) {
+                    vo.setUsername(highlightFields.get("username").get(0));
+                }
+                if (highlightFields.containsKey("school") && !highlightFields.get("school").isEmpty()) {
+                    vo.setSchool(highlightFields.get("school").get(0));
+                }
+                if (highlightFields.containsKey("signature") && !highlightFields.get("signature").isEmpty()) {
+                    vo.setSignature(highlightFields.get("signature").get(0));
+                }
 
-            return ApiResponseUtil.success("搜索成功", users);
+                return vo;
+            }).toList();
+
+            return ApiResponseUtil.success("搜索成功", results);
         } catch (Exception e) {
             log.error("搜索用户失败", e);
-            return ApiResponseUtil.error("搜索失败");
+            return ApiResponseUtil.error("搜索失败: " + e.getMessage());
         }
     }
-
-    /*@Override
-    public ApiResponse<List<Note>> searchNotesByTag(String keyword, String tag, int page, int pageSize) {
-        try {
-            String cacheKey = String.format(NOTE_TAG_SEARCH_CACHE_KEY, keyword, tag, page, pageSize);
-
-            // 尝试从缓存获取
-            List<Note> cachedResult = (List<Note>) redisTemplate.opsForValue().get(cacheKey);
-            if (cachedResult != null) {
-                return ApiResponseUtil.success("搜索成功", cachedResult);
-            }
-
-            // 处理关键词
-            keyword = SearchUtils.preprocessKeyword(keyword);
-
-            // 计算偏移量
-            int offset = (page - 1) * pageSize;
-
-            // 执行搜索
-            List<Note> notes = noteMapper.searchNotesByTag(keyword, tag, pageSize, offset);
-
-            // 存入缓存
-            redisTemplate.opsForValue().set(cacheKey, notes, CACHE_EXPIRE_TIME, TimeUnit.MINUTES);
-
-            return ApiResponseUtil.success("搜索成功", notes);
-        } catch (Exception e) {
-            log.error("搜索笔记失败", e);
-            return ApiResponseUtil.error("搜索失败");
-        }
-    }*/
 }

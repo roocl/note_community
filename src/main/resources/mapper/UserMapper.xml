@@ -153,4 +153,9 @@
                 END
         LIMIT #{limit} OFFSET #{offset}
     </select>
+
+    <select id="findAll" resultType="org.notes.model.entity.User">
+        SELECT * FROM user
+    </select>
+
 </mapper>

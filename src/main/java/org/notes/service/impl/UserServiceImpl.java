@@ -15,7 +15,9 @@ import org.notes.model.vo.user.AvatarVO;
 import org.notes.model.vo.user.LoginUserVO;
 import org.notes.model.vo.user.RegisterVO;
 import org.notes.model.vo.user.UserVO;
+import org.notes.model.es.UserDocument;
 import org.notes.scope.RequestScopeData;
+import org.notes.repository.UserSearchRepository;
 import org.notes.service.EmailService;
 import org.notes.service.FileService;
 import org.notes.service.UserService;
@@ -55,6 +57,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private UserSearchRepository userSearchRepository;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -102,6 +107,9 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             log.error("注册失败", e);
             return ApiResponseUtil.error("注册失败，请稍后再试");
+        } finally {
+            // 同步用户到 Elasticsearch
+            syncUserToEs(user);
         }
     }
 
@@ -167,7 +175,6 @@ public class UserServiceImpl implements UserService {
             return ApiResponseUtil.error("系统错误");
         }
 
-
     }
 
     @Override
@@ -204,6 +211,11 @@ public class UserServiceImpl implements UserService {
 
         try {
             userMapper.update(user);
+
+            // 同步到 Elasticsearch
+            User fullUser = userMapper.findById(userId);
+            syncUserToEs(fullUser);
+
             return ApiResponseUtil.success("更新用户信息成功");
         } catch (Exception e) {
             return ApiResponseUtil.error("更新用户信息失败");
@@ -246,5 +258,20 @@ public class UserServiceImpl implements UserService {
         List<User> users = userMapper.findByIdBatch(authorIds);
 
         return users.stream().collect(Collectors.toMap(User::getUserId, user -> user));
+    }
+
+    /**
+     * 同步用户到 Elasticsearch
+     */
+    private void syncUserToEs(User user) {
+        try {
+            if (user == null || user.getUserId() == null)
+                return;
+            UserDocument doc = new UserDocument();
+            BeanUtils.copyProperties(user, doc);
+            userSearchRepository.save(doc);
+        } catch (Exception e) {
+            log.warn("同步用户到ES失败，userId={}", user != null ? user.getUserId() : null, e);
+        }
     }
 }

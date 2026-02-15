@@ -33,7 +33,6 @@ public class CollectionServiceImpl implements CollectionService {
 
     private final NoteMapper noteMapper;
 
-
     @Override
     public ApiResponse<List<CollectionVO>> getCollections(CollectionQueryParams queryParams) {
         Integer noteId = queryParams.getNoteId();

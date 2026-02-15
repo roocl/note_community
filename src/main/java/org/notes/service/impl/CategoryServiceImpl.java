@@ -54,8 +54,7 @@ public class CategoryServiceImpl implements CategoryService {
                     parentCategoryVO.getChildren().add(childrenCategoryVO);
                 }
             }
-        }
-        );
+        });
         return new ArrayList<>(categoryVOMap.values());
     }
 
@@ -82,7 +81,7 @@ public class CategoryServiceImpl implements CategoryService {
                 throw new RuntimeException("删除分类失败");
             }
             questionMapper.deleteByCategoryId(categoryId);
-            
+
             return ApiResponseUtil.success("删除分类成功");
         } catch (Exception e) {
             throw new RuntimeException("删除分类失败");

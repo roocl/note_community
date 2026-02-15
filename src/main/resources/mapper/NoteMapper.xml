@@ -302,4 +302,8 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>-->
 
+    <select id="findAll" resultType="org.notes.model.entity.Note">
+        SELECT * FROM note
+    </select>
+
 </mapper>

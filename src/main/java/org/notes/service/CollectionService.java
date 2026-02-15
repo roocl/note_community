@@ -22,4 +22,3 @@ public interface CollectionService {
 
     ApiResponse<EmptyVO> deleteCollection(Integer collectionId);
 }
-

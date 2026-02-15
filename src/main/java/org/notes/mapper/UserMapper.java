@@ -8,11 +8,11 @@ import org.notes.model.entity.User;
 import java.util.List;
 
 /**
-* @author Administrator
-* @description 针对表【user(用户表)】的数据库操作Mapper
-* @createDate 2026-01-27 20:20:26
-* @Entity org.notes.model.entity.User
-*/
+ * @author Administrator
+ * @description 针对表【user(用户表)】的数据库操作Mapper
+ * @createDate 2026-01-27 20:20:26
+ * @Entity org.notes.model.entity.User
+ */
 @Mapper
 public interface UserMapper {
 
@@ -27,8 +27,8 @@ public interface UserMapper {
     User findByEmail(@Param("email") String email);
 
     List<User> findByQueryParam(@Param("queryParams") UserQueryParams queryParams,
-                                @Param("limit") Integer limit,
-                                @Param("offset") Integer offset);
+            @Param("limit") Integer limit,
+            @Param("offset") Integer offset);
 
     int countUsersByQueryParam(@Param("queryParams") UserQueryParams queryParams);
 
@@ -43,6 +43,13 @@ public interface UserMapper {
     int getTotalRegisterCount();
 
     List<User> searchUsers(@Param("keyword") String keyword,
-                           @Param("limit") int limit,
-                           @Param("offset") int offset);
+            @Param("limit") int limit,
+            @Param("offset") int offset);
+
+    /**
+     * 查询所有用户（用于 ES 全量同步）
+     *
+     * @return 所有用户列表
+     */
+    List<User> findAll();
 }

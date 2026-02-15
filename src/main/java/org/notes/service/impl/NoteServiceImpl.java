@@ -15,7 +15,9 @@ import org.notes.model.dto.note.UpdateNoteRequest;
 import org.notes.model.entity.Note;
 import org.notes.model.entity.Question;
 import org.notes.model.entity.User;
+import org.notes.model.es.NoteDocument;
 import org.notes.model.vo.note.*;
+import org.notes.repository.NoteSearchRepository;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.*;
 import org.notes.utils.ApiResponseUtil;
@@ -46,6 +48,8 @@ public class NoteServiceImpl implements NoteService {
     private final CategoryService categoryService;
 
     private final QuestionMapper questionMapper;
+
+    private final NoteSearchRepository noteSearchRepository;
 
     @Override
     public ApiResponse<List<NoteVO>> getNotes(NoteQueryParams params) {
@@ -101,7 +105,7 @@ public class NoteServiceImpl implements NoteService {
                     userActionsVO.setIsCollected(true);
                 }
 
-                //todo markdown折叠
+                // todo markdown折叠
 
                 noteVO.setUserActionsVO(userActionsVO);
                 return noteVO;
@@ -134,6 +138,10 @@ public class NoteServiceImpl implements NoteService {
 
         try {
             noteMapper.insert(note);
+
+            // 同步到 Elasticsearch
+            syncNoteToEs(note);
+
             CreateNoteVO createNoteVO = new CreateNoteVO();
             return ApiResponseUtil.success("创建笔记成功", createNoteVO);
         } catch (Exception e) {
@@ -161,6 +169,10 @@ public class NoteServiceImpl implements NoteService {
             note.setSearchVector(processedVector);
 
             noteMapper.update(note);
+
+            // 同步到 Elasticsearch
+            syncNoteToEs(note);
+
             return ApiResponseUtil.success("更新笔记成功");
         } catch (Exception e) {
             return ApiResponseUtil.error("更新笔记失败");
@@ -182,6 +194,14 @@ public class NoteServiceImpl implements NoteService {
 
         try {
             noteMapper.deleteById(noteId);
+
+            // 从 Elasticsearch 删除
+            try {
+                noteSearchRepository.deleteById(noteId);
+            } catch (Exception esEx) {
+                log.warn("删除笔记ES索引失败，noteId={}", noteId, esEx);
+            }
+
             return ApiResponseUtil.success("删除笔记成功");
         } catch (Exception e) {
             return ApiResponseUtil.error("删除笔记失败");
@@ -204,5 +224,18 @@ public class NoteServiceImpl implements NoteService {
         Long userId = requestScopeData.getUserId();
         Top3Count top3Count = noteMapper.submitNoteTop3Count(userId);
         return ApiResponseUtil.success("获取笔记top3成功", top3Count);
+    }
+
+    /**
+     * 同步笔记到 Elasticsearch
+     */
+    private void syncNoteToEs(Note note) {
+        try {
+            NoteDocument doc = new NoteDocument();
+            BeanUtils.copyProperties(note, doc);
+            noteSearchRepository.save(doc);
+        } catch (Exception e) {
+            log.warn("同步笔记到ES失败，noteId={}", note.getNoteId(), e);
+        }
     }
 }

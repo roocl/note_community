@@ -31,7 +31,7 @@
     <!-- 2. 配置日志记录器（Logger） -->
     <Loggers>
         <!-- 指定某些包或类的日志级别，如果需要可以继续添加 -->
-        <Logger name="com.kama" level="debug" additivity="false">
+        <Logger name="org" level="debug" additivity="false">
             <AppenderRef ref="Console" />
             <AppenderRef ref="File" />
         </Logger>
