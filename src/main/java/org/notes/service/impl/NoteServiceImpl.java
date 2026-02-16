@@ -3,11 +3,13 @@ package org.notes.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.notes.annotation.NeedLogin;
+import org.notes.exception.BaseException;
+import org.notes.exception.ForbiddenException;
+import org.notes.exception.NotFoundException;
 import org.notes.mapper.NoteLikeMapper;
 import org.notes.mapper.NoteMapper;
 import org.notes.mapper.QuestionMapper;
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
+import org.notes.model.base.PageResult;
 import org.notes.model.base.Pagination;
 import org.notes.model.dto.note.CreateNoteRequest;
 import org.notes.model.dto.note.NoteQueryParams;
@@ -20,11 +22,11 @@ import org.notes.model.vo.note.*;
 import org.notes.repository.NoteSearchRepository;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.*;
-import org.notes.utils.ApiResponseUtil;
 import org.notes.utils.PaginationUtils;
 import org.notes.utils.SearchUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -52,7 +54,7 @@ public class NoteServiceImpl implements NoteService {
     private final NoteSearchRepository noteSearchRepository;
 
     @Override
-    public ApiResponse<List<NoteVO>> getNotes(NoteQueryParams params) {
+    public PageResult<List<NoteVO>> getNotes(NoteQueryParams params) {
         int offset = PaginationUtils.calculateOffset(params.getPage(), params.getPageSize());
         int total = noteMapper.countNotesByQueryParam(params);
         Pagination pagination = new Pagination(params.getPage(), params.getPageSize(), total);
@@ -111,21 +113,21 @@ public class NoteServiceImpl implements NoteService {
                 return noteVO;
             }).toList();
 
-            return ApiResponseUtil.success("获取笔记列表成功", noteVOs, pagination);
+            return new PageResult<>(noteVOs, pagination);
         } catch (Exception e) {
-            System.out.println(Arrays.toString(e.getStackTrace()));
-            return ApiResponseUtil.error("获取笔记列表失败");
+            throw new BaseException("获取笔记列表失败");
         }
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<CreateNoteVO> createNote(CreateNoteRequest request) {
+    @Transactional(rollbackFor = Exception.class)
+    public CreateNoteVO createNote(CreateNoteRequest request) {
         Integer questionId = request.getQuestionId();
         Question question = questionService.findById(questionId);
 
         if (question == null) {
-            return ApiResponseUtil.error("questionId对应的问题不存在");
+            throw new NotFoundException("questionId对应的问题不存在");
         }
 
         Long userId = requestScopeData.getUserId();
@@ -143,23 +145,24 @@ public class NoteServiceImpl implements NoteService {
             syncNoteToEs(note);
 
             CreateNoteVO createNoteVO = new CreateNoteVO();
-            return ApiResponseUtil.success("创建笔记成功", createNoteVO);
+            return createNoteVO;
         } catch (Exception e) {
-            return ApiResponseUtil.error("创建笔记失败");
+            throw new BaseException("创建笔记失败");
         }
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<EmptyVO> updateNote(Integer noteId, UpdateNoteRequest request) {
+    @Transactional(rollbackFor = Exception.class)
+    public void updateNote(Integer noteId, UpdateNoteRequest request) {
         Note note = noteMapper.findById(noteId);
         if (note == null) {
-            return ApiResponseUtil.error("noteId对应的笔记不存在");
+            throw new NotFoundException("noteId对应的笔记不存在");
         }
 
         Long userId = requestScopeData.getUserId();
         if (!Objects.equals(userId, note.getAuthorId())) {
-            return ApiResponseUtil.error("没有权限修改别人的笔记");
+            throw new ForbiddenException("没有权限修改别人的笔记");
         }
 
         try {
@@ -172,24 +175,23 @@ public class NoteServiceImpl implements NoteService {
 
             // 同步到 Elasticsearch
             syncNoteToEs(note);
-
-            return ApiResponseUtil.success("更新笔记成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("更新笔记失败");
+            throw new BaseException("更新笔记失败");
         }
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<EmptyVO> deleteNote(Integer noteId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteNote(Integer noteId) {
         Note note = noteMapper.findById(noteId);
         if (note == null) {
-            return ApiResponseUtil.error("noteId对应的笔记不存在");
+            throw new NotFoundException("noteId对应的笔记不存在");
         }
 
         Long userId = requestScopeData.getUserId();
         if (!Objects.equals(userId, note.getAuthorId())) {
-            return ApiResponseUtil.error("没有权限删除别人的笔记");
+            throw new ForbiddenException("没有权限删除别人的笔记");
         }
 
         try {
@@ -201,29 +203,26 @@ public class NoteServiceImpl implements NoteService {
             } catch (Exception esEx) {
                 log.warn("删除笔记ES索引失败，noteId={}", noteId, esEx);
             }
-
-            return ApiResponseUtil.success("删除笔记成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("删除笔记失败");
+            throw new BaseException("删除笔记失败");
         }
     }
 
     @Override
-    public ApiResponse<List<NoteRankListItem>> submitNoteRank() {
-        return ApiResponseUtil.success("获取笔记排行榜成功", noteMapper.submitNoteRank());
+    public List<NoteRankListItem> submitNoteRank() {
+        return noteMapper.submitNoteRank();
     }
 
     @Override
-    public ApiResponse<List<NoteHeatMapItem>> submitNoteHeatMap() {
+    public List<NoteHeatMapItem> submitNoteHeatMap() {
         Long userId = requestScopeData.getUserId();
-        return ApiResponseUtil.success("获取笔记热力图成功", noteMapper.submitNoteHeatMap(userId));
+        return noteMapper.submitNoteHeatMap(userId);
     }
 
     @Override
-    public ApiResponse<Top3Count> submitNoteTop3Count() {
+    public Top3Count submitNoteTop3Count() {
         Long userId = requestScopeData.getUserId();
-        Top3Count top3Count = noteMapper.submitNoteTop3Count(userId);
-        return ApiResponseUtil.success("获取笔记top3成功", top3Count);
+        return noteMapper.submitNoteTop3Count(userId);
     }
 
     /**

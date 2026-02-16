@@ -1,7 +1,5 @@
 package org.notes.service;
 
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.category.CreateCategoryBody;
 import org.notes.model.dto.category.UpdateCategoryBody;
 import org.notes.model.entity.Category;
@@ -22,13 +20,13 @@ public interface CategoryService {
 
     List<CategoryVO> buildCategoryTree();
 
-    ApiResponse<List<CategoryVO>> categoryList();
+    List<CategoryVO> categoryList();
 
-    ApiResponse<EmptyVO> deleteCategory(Integer categoryId);
+    void deleteCategory(Integer categoryId);
 
-    ApiResponse<CreateCategoryVO> createCategory(CreateCategoryBody createCategoryBody);
+    CreateCategoryVO createCategory(CreateCategoryBody createCategoryBody);
 
-    ApiResponse<EmptyVO> updateCategory(Integer categoryId, UpdateCategoryBody updateCategoryBody);
+    void updateCategory(Integer categoryId, UpdateCategoryBody updateCategoryBody);
 
     Category findOrCreateCategory(String categoryName, Integer parentCategoryId);
 }

@@ -1,7 +1,6 @@
 package org.notes.service;
 
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
+import org.notes.model.base.PageResult;
 import org.notes.model.dto.comment.CommentQueryParams;
 import org.notes.model.dto.comment.CreateCommentRequest;
 import org.notes.model.dto.comment.UpdateCommentRequest;
@@ -13,15 +12,15 @@ import java.util.List;
 @Transactional
 public interface CommentService {
 
-    ApiResponse<Integer> createComment(CreateCommentRequest request);
+    Integer createComment(CreateCommentRequest request);
 
-    ApiResponse<EmptyVO> updateComment(Integer commentId, UpdateCommentRequest request);
+    void updateComment(Integer commentId, UpdateCommentRequest request);
 
-    ApiResponse<EmptyVO> deleteComment(Integer commentId);
+    void deleteComment(Integer commentId);
 
-    ApiResponse<List<CommentVO>> getComments(CommentQueryParams params);
+    PageResult<List<CommentVO>> getComments(CommentQueryParams params);
 
-    ApiResponse<EmptyVO> likeComment(Integer commentId);
+    void likeComment(Integer commentId);
 
-    ApiResponse<EmptyVO> unlikeComment(Integer commentId);
+    void unlikeComment(Integer commentId);
 }

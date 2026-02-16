@@ -5,9 +5,8 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.notes.annotation.NeedLogin;
+import org.notes.exception.UnauthorizedException;
 import org.notes.scope.RequestScopeData;
-import org.notes.utils.ApiResponseUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Aspect
@@ -21,11 +20,11 @@ public class NeedLoginAspect {
     public Object around(ProceedingJoinPoint joinPoint, NeedLogin needLogin) throws Throwable {
 
         if (!requestScopeData.isLogin()) {
-            return ApiResponseUtil.error("用户未登录");
+            throw new UnauthorizedException("用户未登录");
         }
 
         if (requestScopeData.getUserId() == null) {
-            return ApiResponseUtil.error("用户 ID 异常");
+            throw new UnauthorizedException("用户 ID 异常");
         }
         return joinPoint.proceed();
     }

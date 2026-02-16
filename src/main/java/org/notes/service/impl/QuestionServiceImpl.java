@@ -1,11 +1,12 @@
 package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.notes.exception.BaseException;
+import org.notes.exception.NotFoundException;
 import org.notes.mapper.CategoryMapper;
 import org.notes.mapper.NoteMapper;
 import org.notes.mapper.QuestionMapper;
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
+import org.notes.model.base.PageResult;
 import org.notes.model.base.Pagination;
 import org.notes.model.dto.question.*;
 import org.notes.model.entity.Category;
@@ -18,11 +19,10 @@ import org.notes.model.vo.question.QuestionVO;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.CategoryService;
 import org.notes.service.QuestionService;
-import org.notes.utils.ApiResponseUtil;
 import org.notes.utils.PaginationUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -70,10 +70,10 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public ApiResponse<QuestionNoteVO> userGetQuestion(Integer questionId) {
+    public QuestionNoteVO userGetQuestion(Integer questionId) {
         Question question = questionMapper.findById(questionId);
         if (question == null) {
-            return ApiResponseUtil.error("questionId非法");
+            throw new NotFoundException("questionId非法");
         }
 
         QuestionNoteVO questionNoteVO = new QuestionNoteVO();
@@ -92,11 +92,11 @@ public class QuestionServiceImpl implements QuestionService {
 
         questionMapper.incrementViewCount(questionId);
 
-        return ApiResponseUtil.success("获取问题成功", questionNoteVO);
+        return questionNoteVO;
     }
 
     @Override
-    public ApiResponse<List<QuestionUserVO>> userGetQuestions(QuestionQueryParams queryParams) {
+    public PageResult<List<QuestionUserVO>> userGetQuestions(QuestionQueryParams queryParams) {
         int offset = PaginationUtils.calculateOffset(queryParams.getPage(), queryParams.getPageSize());
         int total = questionMapper.countByQueryParam(queryParams);
         Pagination pagination = new Pagination(queryParams.getPage(), queryParams.getPageSize(), total);
@@ -133,11 +133,11 @@ public class QuestionServiceImpl implements QuestionService {
             return questionUserVO;
         }).toList();
 
-        return ApiResponseUtil.success("获取用户问题列表成功", questionUserVOs, pagination);
+        return new PageResult<>(questionUserVOs, pagination);
     }
 
     @Override
-    public ApiResponse<List<QuestionVO>> searchQuestion(SearchQuestionBody body) {
+    public List<QuestionVO> searchQuestion(SearchQuestionBody body) {
         String keyword = body.getKeyword();
 
         List<Question> questionList = questionMapper.findByKeyword(keyword);
@@ -148,11 +148,11 @@ public class QuestionServiceImpl implements QuestionService {
             return questionVO;
         }).toList();
 
-        return ApiResponseUtil.success("搜索问题成功", questionVOList);
+        return questionVOList;
     }
 
     @Override
-    public ApiResponse<List<QuestionVO>> adminGetQuestions(QuestionQueryParams queryParams) {
+    public PageResult<List<QuestionVO>> adminGetQuestions(QuestionQueryParams queryParams) {
         int offset = PaginationUtils.calculateOffset(queryParams.getPage(), queryParams.getPageSize());
         int total = questionMapper.countByQueryParam(queryParams);
 
@@ -165,14 +165,15 @@ public class QuestionServiceImpl implements QuestionService {
             return questionVO;
         }).toList();
 
-        return ApiResponseUtil.success("获取问题列表成功", questionVOs, pagination);
+        return new PageResult<>(questionVOs, pagination);
     }
 
     @Override
-    public ApiResponse<CreateQuestionVO> adminCreateQuestion(CreateQuestionBody createQuestionBody) {
+    @Transactional(rollbackFor = Exception.class)
+    public CreateQuestionVO adminCreateQuestion(CreateQuestionBody createQuestionBody) {
         Category category = categoryMapper.findById(createQuestionBody.getCategoryId());
         if (category == null) {
-            return ApiResponseUtil.error("分类Id非法");
+            throw new NotFoundException("分类Id非法");
         }
 
         Question question = new Question();
@@ -182,32 +183,33 @@ public class QuestionServiceImpl implements QuestionService {
             questionMapper.insert(question);
             CreateQuestionVO createQuestionVO = new CreateQuestionVO();
             createQuestionVO.setQuestionId(question.getQuestionId());
-            return ApiResponseUtil.success("创建问题成功", createQuestionVO);
+            return createQuestionVO;
         } catch (Exception e) {
-            return ApiResponseUtil.error("创建问题失败");
+            throw new BaseException("创建问题失败");
         }
     }
 
     @Override
-    public ApiResponse<EmptyVO> adminUpdateQuestion(Integer questionId, UpdateQuestionBody updateQuestionBody) {
+    @Transactional(rollbackFor = Exception.class)
+    public void adminUpdateQuestion(Integer questionId, UpdateQuestionBody updateQuestionBody) {
         Question question = new Question();
         BeanUtils.copyProperties(updateQuestionBody, question);
         question.setQuestionId(questionId);
 
         try {
             questionMapper.update(question);
-            return ApiResponseUtil.success("更新问题成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("更新问题失败");
+            throw new BaseException("更新问题失败");
         }
     }
 
     @Override
-    public ApiResponse<QuestionUserVO> adminDeleteQuestion(Integer questionId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void adminDeleteQuestion(Integer questionId) {
         if (questionMapper.deleteById(questionId) > 0) {
-            return ApiResponseUtil.success("删除问题成功");
+            return;
         } else {
-            return ApiResponseUtil.error("删除问题失败");
+            throw new BaseException("删除问题失败");
         }
     }
 }

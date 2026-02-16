@@ -1,7 +1,5 @@
 package org.notes.service;
 
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.message.MessageDTO;
 import org.notes.model.vo.message.MessageVO;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,15 +11,15 @@ public interface MessageService {
 
     Integer createMessage(MessageDTO messageDTO);
 
-    ApiResponse<List<MessageVO>> getMessages();
+    List<MessageVO> getMessages();
 
-    ApiResponse<EmptyVO> markAsRead(Integer messageId);
+    void markAsRead(Integer messageId);
 
-    ApiResponse<EmptyVO> markBatchAsRead(List<Integer> messageIds);
+    void markBatchAsRead(List<Integer> messageIds);
 
-    ApiResponse<EmptyVO> markAllAsRead();
+    void markAllAsRead();
 
-    ApiResponse<EmptyVO> deleteMessage(Integer messageId);
+    void deleteMessage(Integer messageId);
 
-    ApiResponse<Integer> getUnreadCount();
+    Integer getUnreadCount();
 }

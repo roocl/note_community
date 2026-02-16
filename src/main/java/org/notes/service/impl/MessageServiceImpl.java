@@ -2,12 +2,11 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.notes.annotation.NeedLogin;
+import org.notes.exception.BaseException;
 import org.notes.mapper.CommentMapper;
 import org.notes.mapper.MessageMapper;
 import org.notes.mapper.NoteMapper;
 import org.notes.mapper.QuestionMapper;
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.message.MessageDTO;
 import org.notes.model.entity.*;
 import org.notes.model.enums.message.MessageTargetType;
@@ -18,6 +17,7 @@ import org.notes.service.MessageService;
 import org.notes.service.UserService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -49,13 +49,13 @@ public class MessageServiceImpl implements MessageService {
             }
             return messageMapper.insert(message);
         } catch (Exception e) {
-            throw new RuntimeException("创建消息通知失败: " + e.getMessage());
+            throw new BaseException("创建消息通知失败: " + e.getMessage());
         }
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<List<MessageVO>> getMessages() {
+    public List<MessageVO> getMessages() {
         Long userId = requestScopeData.getUserId();
         List<Message> messages = messageMapper.selectByUserId(userId);
 
@@ -101,46 +101,45 @@ public class MessageServiceImpl implements MessageService {
             return messageVO;
         }).toList();
 
-        return ApiResponse.success(messageVOS);
+        return messageVOS;
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<EmptyVO> markAsRead(Integer messageId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void markAsRead(Integer messageId) {
         Long userId = requestScopeData.getUserId();
         messageMapper.markAsRead(messageId, userId);
-        return ApiResponse.success();
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<EmptyVO> markBatchAsRead(List<Integer> messageIds) {
+    @Transactional(rollbackFor = Exception.class)
+    public void markBatchAsRead(List<Integer> messageIds) {
         Long userId = requestScopeData.getUserId();
         messageMapper.markBatchAsRead(messageIds, userId);
-        return ApiResponse.success();
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<EmptyVO> markAllAsRead() {
+    @Transactional(rollbackFor = Exception.class)
+    public void markAllAsRead() {
         Long userId = requestScopeData.getUserId();
         messageMapper.markAllAsRead(userId);
-        return ApiResponse.success();
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<EmptyVO> deleteMessage(Integer messageId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteMessage(Integer messageId) {
         Long userId = requestScopeData.getUserId();
         messageMapper.deleteMessage(messageId, userId);
-        return ApiResponse.success();
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<Integer> getUnreadCount() {
+    public Integer getUnreadCount() {
         Long userId = requestScopeData.getUserId();
-        Integer count = messageMapper.countUnread(userId);
-        return ApiResponse.success(count);
+        return messageMapper.countUnread(userId);
     }
 }

@@ -1,7 +1,6 @@
 package org.notes.service;
 
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
+import org.notes.model.base.PageResult;
 import org.notes.model.dto.note.CreateNoteRequest;
 import org.notes.model.dto.note.NoteQueryParams;
 import org.notes.model.dto.note.UpdateNoteRequest;
@@ -12,18 +11,18 @@ import java.util.List;
 
 @Transactional
 public interface NoteService {
-    ApiResponse<List<NoteVO>> getNotes(NoteQueryParams params);
+    PageResult<List<NoteVO>> getNotes(NoteQueryParams params);
 
-    ApiResponse<CreateNoteVO> createNote(CreateNoteRequest request);
+    CreateNoteVO createNote(CreateNoteRequest request);
 
-    ApiResponse<EmptyVO> updateNote(Integer noteId, UpdateNoteRequest request);
+    void updateNote(Integer noteId, UpdateNoteRequest request);
 
-    ApiResponse<EmptyVO> deleteNote(Integer noteId);
+    void deleteNote(Integer noteId);
 
-    ApiResponse<List<NoteRankListItem>> submitNoteRank();
+    List<NoteRankListItem> submitNoteRank();
 
-    ApiResponse<List<NoteHeatMapItem>> submitNoteHeatMap();
+    List<NoteHeatMapItem> submitNoteHeatMap();
 
-    ApiResponse<Top3Count> submitNoteTop3Count();
+    Top3Count submitNoteTop3Count();
 
 }

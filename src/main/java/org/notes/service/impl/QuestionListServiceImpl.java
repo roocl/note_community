@@ -1,16 +1,15 @@
 package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.notes.exception.BaseException;
+import org.notes.exception.NotFoundException;
 import org.notes.mapper.QuestionListItemMapper;
 import org.notes.mapper.QuestionListMapper;
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.questionList.CreateQuestionListBody;
 import org.notes.model.dto.questionList.UpdateQuestionListBody;
 import org.notes.model.entity.QuestionList;
 import org.notes.model.vo.questionList.CreateQuestionListVO;
 import org.notes.service.QuestionListService;
-import org.notes.utils.ApiResponseUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,17 +25,21 @@ public class QuestionListServiceImpl implements QuestionListService {
     private final QuestionListItemMapper questionListItemMapper;
 
     @Override
-    public ApiResponse<QuestionList> getQuestionList(Integer questionListId) {
-        return ApiResponseUtil.success("获取题单成功", questionListMapper.findById(questionListId));
+    public QuestionList getQuestionList(Integer questionListId) {
+        QuestionList questionList = questionListMapper.findById(questionListId);
+        if (questionList == null) {
+            throw new NotFoundException("题单不存在");
+        }
+        return questionList;
     }
 
     @Override
-    public ApiResponse<List<QuestionList>> getQuestionLists() {
-        return ApiResponseUtil.success("获取所有题单成功", questionListMapper.findAll());
+    public List<QuestionList> getQuestionLists() {
+        return questionListMapper.findAll();
     }
 
     @Override
-    public ApiResponse<CreateQuestionListVO> createQuestionList(CreateQuestionListBody body) {
+    public CreateQuestionListVO createQuestionList(CreateQuestionListBody body) {
         QuestionList questionList = new QuestionList();
         BeanUtils.copyProperties(body, questionList);
 
@@ -45,40 +48,41 @@ public class QuestionListServiceImpl implements QuestionListService {
             CreateQuestionListVO createQuestionListVO = new CreateQuestionListVO();
             createQuestionListVO.setQuestionListId(questionList.getQuestionListId());
 
-            return ApiResponseUtil.success("创建题单成功", createQuestionListVO);
+            return createQuestionListVO;
         } catch (Exception e) {
-            return ApiResponseUtil.error("创建题单失败");
+            throw new BaseException("创建题单失败");
         }
     }
 
     @Override
-    public ApiResponse<EmptyVO> deleteQuestionList(Integer questionListId) {
+    public void deleteQuestionList(Integer questionListId) {
         QuestionList questionList = questionListMapper.findById(questionListId);
 
         if (questionList == null) {
-            return ApiResponseUtil.error("题单不存在");
+            throw new NotFoundException("题单不存在");
         }
 
         try {
             questionListMapper.deleteById(questionListId);
             questionListItemMapper.deleteByQuestionListId(questionListId);
-            return ApiResponseUtil.success("删除题单成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("删除题单失败");
+            throw new BaseException("删除题单失败");
         }
     }
 
     @Override
-    public ApiResponse<EmptyVO> updateQuestionList(Integer questionListId, UpdateQuestionListBody body) {
+    public void updateQuestionList(Integer questionListId, UpdateQuestionListBody body) {
         QuestionList questionList = questionListMapper.findById(questionListId);
+        if (questionList == null) {
+            throw new NotFoundException("题单不存在");
+        }
         BeanUtils.copyProperties(body, questionList);
         questionList.setQuestionListId(questionListId);
 
         try {
             questionListMapper.update(questionList);
-            return ApiResponseUtil.success("更新题单成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("更新题单失败");
+            throw new BaseException("更新题单失败");
         }
     }
 }

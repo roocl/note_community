@@ -1,6 +1,7 @@
 package org.notes.service;
 
-import org.notes.model.base.ApiResponse;
+import org.notes.model.base.AuthResult;
+import org.notes.model.base.PageResult;
 import org.notes.model.dto.user.LoginRequest;
 import org.notes.model.dto.user.RegisterRequest;
 import org.notes.model.dto.user.UpdateUserRequest;
@@ -18,19 +19,19 @@ import java.util.Map;
 
 @Transactional
 public interface UserService {
-    public ApiResponse<RegisterVO> register(RegisterRequest request);
+    AuthResult<RegisterVO> register(RegisterRequest request);
 
-    public ApiResponse<LoginUserVO> login(LoginRequest request);
+    AuthResult<LoginUserVO> login(LoginRequest request);
 
-    public ApiResponse<LoginUserVO> whoami();
+    AuthResult<LoginUserVO> whoami();
 
-    public ApiResponse<UserVO> getUserInfo(Long userId);
+    UserVO getUserInfo(Long userId);
 
-    public ApiResponse<LoginUserVO> updateUserInfo(UpdateUserRequest request);
+    LoginUserVO updateUserInfo(UpdateUserRequest request);
 
-    public ApiResponse<AvatarVO> uploadAvatar(MultipartFile file);
+    AvatarVO uploadAvatar(MultipartFile file);
 
-    public ApiResponse<List<User>> getUserList(UserQueryParams queryParam);
+    PageResult<List<User>> getUserList(UserQueryParams queryParam);
 
     Map<Long, User> getUserMapByIds(List<Long> authorIds);
 }

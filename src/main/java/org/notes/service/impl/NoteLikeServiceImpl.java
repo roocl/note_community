@@ -2,10 +2,10 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.notes.annotation.NeedLogin;
+import org.notes.exception.BaseException;
+import org.notes.exception.NotFoundException;
 import org.notes.mapper.NoteLikeMapper;
 import org.notes.mapper.NoteMapper;
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.message.MessageDTO;
 import org.notes.model.entity.Note;
 import org.notes.model.entity.NoteLike;
@@ -14,9 +14,6 @@ import org.notes.model.enums.message.MessageType;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.MessageService;
 import org.notes.service.NoteLikeService;
-import org.notes.service.NoteService;
-import org.notes.utils.ApiResponseUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,11 +39,11 @@ public class NoteLikeServiceImpl implements NoteLikeService {
 
     @Override
     @NeedLogin
-    @Transactional
-    public ApiResponse<EmptyVO> likeNote(Integer noteId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void likeNote(Integer noteId) {
         Note note = noteMapper.findById(noteId);
         if (note == null) {
-            return ApiResponseUtil.error("笔记未找到");
+            throw new NotFoundException("笔记未找到");
         }
 
         Long userId = requestScopeData.getUserId();
@@ -66,22 +63,19 @@ public class NoteLikeServiceImpl implements NoteLikeService {
             messageDTO.setTargetId(noteId);
             messageDTO.setTargetType(MessageTargetType.NOTE);
             messageDTO.setIsRead(false);
-
-            System.out.println(messageDTO);
-
-            return ApiResponseUtil.success("点赞成功");
+            messageService.createMessage(messageDTO);
         } catch (Exception e) {
-            return ApiResponseUtil.error("点赞失败");
+            throw new BaseException("点赞失败");
         }
     }
 
     @Override
     @NeedLogin
-    @Transactional
-    public ApiResponse<EmptyVO> unlikeNote(Integer noteId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void unlikeNote(Integer noteId) {
         Note note = noteMapper.findById(noteId);
         if (note == null) {
-            return ApiResponseUtil.error("笔记未找到");
+            throw new NotFoundException("笔记未找到");
         }
 
         Long userId = requestScopeData.getUserId();
@@ -93,10 +87,8 @@ public class NoteLikeServiceImpl implements NoteLikeService {
                 noteLikeMapper.delete(noteLike);
                 noteMapper.unlikeNote(noteId);
             }
-
-            return ApiResponseUtil.success("取消点赞成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("取消点赞失败");
+            throw new BaseException("取消点赞失败");
         }
     }
 }

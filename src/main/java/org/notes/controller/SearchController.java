@@ -8,6 +8,7 @@ import org.notes.model.base.ApiResponse;
 import org.notes.model.vo.search.NoteSearchVO;
 import org.notes.model.vo.search.UserSearchVO;
 import org.notes.service.SearchService;
+import org.notes.utils.ApiResponseUtil;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -30,7 +31,7 @@ public class SearchController {
             @ApiParam("搜索关键词") @RequestParam String keyword,
             @ApiParam("页码") @RequestParam(defaultValue = "1") @Min(1) Integer page,
             @ApiParam("每页大小") @RequestParam(defaultValue = "20") @Min(1) Integer pageSize) {
-        return searchService.searchNotes(keyword, page, pageSize);
+        return ApiResponseUtil.success("搜索成功", searchService.searchNotes(keyword, page, pageSize));
     }
 
     @ApiOperation("搜索用户")
@@ -39,7 +40,7 @@ public class SearchController {
             @ApiParam("搜索关键词") @RequestParam String keyword,
             @ApiParam("页码") @RequestParam(defaultValue = "1") @Min(1) Integer page,
             @ApiParam("每页大小") @RequestParam(defaultValue = "20") @Min(1) Integer pageSize) {
-        return searchService.searchUsers(keyword, page, pageSize);
+        return ApiResponseUtil.success("搜索成功", searchService.searchUsers(keyword, page, pageSize));
     }
 
 }

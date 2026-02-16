@@ -27,11 +27,7 @@ public class EmailController {
     @GetMapping("/verify-code")
     public ApiResponse<Void> sendVerifyCode(
             @ApiParam("邮箱地址") @RequestParam @NotBlank @Email String email) {
-        try {
-            emailService.sendVerificationCode(email);
-            return ApiResponseUtil.success(null);
-        } catch (Exception e) {
-            return ApiResponseUtil.error(e.getMessage());
-        }
+        emailService.sendVerificationCode(email);
+        return ApiResponseUtil.success("发送成功", null);
     }
 }

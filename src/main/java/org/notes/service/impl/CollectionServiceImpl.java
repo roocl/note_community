@@ -2,11 +2,11 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.notes.annotation.NeedLogin;
+import org.notes.exception.BaseException;
+import org.notes.exception.ForbiddenException;
 import org.notes.mapper.CollectionMapper;
 import org.notes.mapper.CollectionNoteMapper;
 import org.notes.mapper.NoteMapper;
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.collection.CollectionQueryParams;
 import org.notes.model.dto.collection.CreateCollectionBody;
 import org.notes.model.dto.collection.UpdateCollectionBody;
@@ -15,9 +15,9 @@ import org.notes.model.vo.collection.CollectionVO;
 import org.notes.model.vo.collection.CreateCollectionVO;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.CollectionService;
-import org.notes.utils.ApiResponseUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -34,7 +34,7 @@ public class CollectionServiceImpl implements CollectionService {
     private final NoteMapper noteMapper;
 
     @Override
-    public ApiResponse<List<CollectionVO>> getCollections(CollectionQueryParams queryParams) {
+    public List<CollectionVO> getCollections(CollectionQueryParams queryParams) {
         Integer noteId = queryParams.getNoteId();
 
         List<Collection> collections = collectionMapper.findByCreatorId(queryParams.getCreatorId());
@@ -64,12 +64,13 @@ public class CollectionServiceImpl implements CollectionService {
             return collectionVO;
         }).toList();
 
-        return ApiResponseUtil.success("获取收藏夹列表成功", collectionVOS);
+        return collectionVOS;
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<CreateCollectionVO> createCollection(CreateCollectionBody requestBody) {
+    @Transactional(rollbackFor = Exception.class)
+    public CreateCollectionVO createCollection(CreateCollectionBody requestBody) {
         Long creatorId = requestScopeData.getUserId();
 
         Collection collection = new Collection();
@@ -82,20 +83,21 @@ public class CollectionServiceImpl implements CollectionService {
             CreateCollectionVO createCollectionVO = new CreateCollectionVO();
             createCollectionVO.setCollectionId(collection.getCollectionId());
 
-            return ApiResponseUtil.success("新建收藏夹成功", createCollectionVO);
+            return createCollectionVO;
         } catch (Exception e) {
-            return ApiResponseUtil.error("新建收藏夹失败");
+            throw new BaseException("新建收藏夹失败");
         }
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<EmptyVO> updateCollection(Integer collectionId, UpdateCollectionBody requestBody) {
+    @Transactional(rollbackFor = Exception.class)
+    public void updateCollection(Integer collectionId, UpdateCollectionBody requestBody) {
         Long creatorId = requestScopeData.getUserId();
         Collection collection = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
 
         if (collection == null) {
-            return ApiResponseUtil.error("收藏夹不存在或者没有权限修改");
+            throw new ForbiddenException("收藏夹不存在或者没有权限修改");
         }
 
         try {
@@ -105,30 +107,27 @@ public class CollectionServiceImpl implements CollectionService {
             collection.setDescription(description);
 
             collectionMapper.update(collection);
-
-            return ApiResponseUtil.success("修改收藏夹成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("修改收藏夹失败");
+            throw new BaseException("修改收藏夹失败");
         }
     }
 
     @Override
     @NeedLogin
-    public ApiResponse<EmptyVO> deleteCollection(Integer collectionId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteCollection(Integer collectionId) {
         Long creatorId = requestScopeData.getUserId();
         Collection collection = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
 
         if (collection == null) {
-            return ApiResponseUtil.error("收藏夹不存在或者没有权限删除");
+            throw new ForbiddenException("收藏夹不存在或者没有权限删除");
         }
 
         try {
             collectionMapper.deleteById(collectionId);
             collectionNoteMapper.deleteByCollectionId(collectionId);
-
-            return ApiResponseUtil.success("删除收藏夹成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("删除收藏夹失败");
+            throw new BaseException("删除收藏夹失败");
         }
     }
 

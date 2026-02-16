@@ -4,13 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
-import org.notes.model.base.ApiResponse;
+import org.notes.exception.BaseException;
 import org.notes.model.es.NoteDocument;
 import org.notes.model.es.UserDocument;
 import org.notes.model.vo.search.NoteSearchVO;
 import org.notes.model.vo.search.UserSearchVO;
 import org.notes.service.SearchService;
-import org.notes.utils.ApiResponseUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -30,7 +29,7 @@ public class SearchServiceImpl implements SearchService {
     private final ElasticsearchOperations elasticsearchOperations;
 
     @Override
-    public ApiResponse<List<NoteSearchVO>> searchNotes(String keyword, int page, int pageSize) {
+    public List<NoteSearchVO> searchNotes(String keyword, int page, int pageSize) {
         try {
             // 构建高亮
             HighlightBuilder highlightBuilder = new HighlightBuilder();
@@ -62,15 +61,15 @@ public class SearchServiceImpl implements SearchService {
                 return vo;
             }).toList();
 
-            return ApiResponseUtil.success("搜索成功", results);
+            return results;
         } catch (Exception e) {
             log.error("搜索笔记失败", e);
-            return ApiResponseUtil.error("搜索失败: " + e.getMessage());
+            throw new BaseException("搜索失败: " + e.getMessage());
         }
     }
 
     @Override
-    public ApiResponse<List<UserSearchVO>> searchUsers(String keyword, int page, int pageSize) {
+    public List<UserSearchVO> searchUsers(String keyword, int page, int pageSize) {
         try {
             // 构建高亮
             HighlightBuilder highlightBuilder = new HighlightBuilder();
@@ -113,10 +112,10 @@ public class SearchServiceImpl implements SearchService {
                 return vo;
             }).toList();
 
-            return ApiResponseUtil.success("搜索成功", results);
+            return results;
         } catch (Exception e) {
             log.error("搜索用户失败", e);
-            return ApiResponseUtil.error("搜索失败: " + e.getMessage());
+            throw new BaseException("搜索失败: " + e.getMessage());
         }
     }
 }

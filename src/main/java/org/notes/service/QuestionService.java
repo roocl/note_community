@@ -1,7 +1,6 @@
 package org.notes.service;
 
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
+import org.notes.model.base.PageResult;
 import org.notes.model.dto.question.*;
 import org.notes.model.entity.Question;
 import org.notes.model.vo.question.CreateQuestionVO;
@@ -26,18 +25,18 @@ public interface QuestionService {
 
     Map<Integer, Question> getQuestionMapByIds(List<Integer> questionIds);
 
-    ApiResponse<QuestionNoteVO> userGetQuestion(Integer questionId);
+    QuestionNoteVO userGetQuestion(Integer questionId);
 
-    ApiResponse<List<QuestionUserVO>> userGetQuestions(QuestionQueryParams queryParam);
+    PageResult<List<QuestionUserVO>> userGetQuestions(QuestionQueryParams queryParam);
 
-    ApiResponse<List<QuestionVO>> searchQuestion(SearchQuestionBody body);
+    List<QuestionVO> searchQuestion(SearchQuestionBody body);
 
-    ApiResponse<List<QuestionVO>> adminGetQuestions(QuestionQueryParams queryParam);
+    PageResult<List<QuestionVO>> adminGetQuestions(QuestionQueryParams queryParam);
 
-    ApiResponse<CreateQuestionVO> adminCreateQuestion(CreateQuestionBody createQuestionBody);
+    CreateQuestionVO adminCreateQuestion(CreateQuestionBody createQuestionBody);
 
 
-    ApiResponse<EmptyVO> adminUpdateQuestion(Integer questionId, UpdateQuestionBody updateQuestionBody);
+    void adminUpdateQuestion(Integer questionId, UpdateQuestionBody updateQuestionBody);
 
-    ApiResponse<QuestionUserVO> adminDeleteQuestion(Integer questionId);
+    void adminDeleteQuestion(Integer questionId);
 }

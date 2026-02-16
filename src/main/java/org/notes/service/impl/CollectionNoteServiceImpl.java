@@ -2,11 +2,12 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.notes.annotation.NeedLogin;
+import org.notes.exception.BaseException;
+import org.notes.exception.ForbiddenException;
+import org.notes.exception.NotFoundException;
 import org.notes.mapper.CollectionMapper;
 import org.notes.mapper.CollectionNoteMapper;
 import org.notes.mapper.NoteMapper;
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.collectionNote.UpdateCollectionNoteBatchBody;
 import org.notes.model.dto.collectionNote.UpdateCollectionNoteBody;
 import org.notes.model.entity.Collection;
@@ -15,7 +16,6 @@ import org.notes.model.entity.Note;
 import org.notes.model.vo.note.NoteVO;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.CollectionNoteService;
-import org.notes.utils.ApiResponseUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,17 +36,17 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
 
     @Override
     @NeedLogin
-    public ApiResponse<List<NoteVO>> getCollectNotes(Integer collectionId) {
+    public List<NoteVO> getCollectNotes(Integer collectionId) {
         Long creatorId = requestScopeData.getUserId();
         Collection collection = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
 
         if (collection == null) {
-            return ApiResponseUtil.error("收藏夹不存在或者没有权限查看");
+            throw new ForbiddenException("收藏夹不存在或者没有权限查看");
         }
         List<Integer> noteIds = collectionNoteMapper.findNoteIdsByCollectionId(collectionId);
 
         if (noteIds.isEmpty()) {
-            return ApiResponseUtil.success("查询笔记成功", new ArrayList<>());
+            return new ArrayList<>();
         }
 
         try {
@@ -56,32 +56,32 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
                 BeanUtils.copyProperties(note, noteVO);
                 return noteVO;
             }).toList();
-            return ApiResponseUtil.success("查询收藏夹笔记成功", noteVOS);
+            return noteVOS;
         } catch (Exception e) {
-            return ApiResponseUtil.error("查询收藏夹笔记失败");
+            throw new BaseException("查询收藏夹笔记失败");
         }
     }
 
     @Override
     @NeedLogin
-    @Transactional
-    public ApiResponse<EmptyVO> createCollectionNote(Integer collectionId, UpdateCollectionNoteBody requestBody) {
+    @Transactional(rollbackFor = Exception.class)
+    public void createCollectionNote(Integer collectionId, UpdateCollectionNoteBody requestBody) {
         Long creatorId = requestScopeData.getUserId();
         Collection collection = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
         if (collection == null) {
-            return ApiResponseUtil.error("收藏夹不存在或者没有权限添加笔记");
+            throw new ForbiddenException("收藏夹不存在或者没有权限添加笔记");
         }
 
         Integer noteId = requestBody.getNoteId();
         Note note = noteMapper.findById(noteId);
         if (note == null) {
-            return ApiResponseUtil.error("笔记不存在");
+            throw new NotFoundException("笔记不存在");
         }
 
         CollectionNote collectionNote = collectionNoteMapper.findByCollectionIdAndNoteId(collectionId, noteId);
 
         if (collectionNote != null) {
-            return ApiResponseUtil.error("该收藏夹已存在目标笔记，请勿重复添加");
+            throw new BaseException("该收藏夹已存在目标笔记，请勿重复添加");
         }
 
         try {
@@ -95,32 +95,30 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
             if (collectionMapper.countByCreatorIdAndNoteId(creatorId, noteId) == 1) {
                 noteMapper.collectNote(noteId);
             }
-
-            return ApiResponseUtil.success("添加收藏夹笔记成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("添加收藏夹笔记失败");
+            throw new BaseException("添加收藏夹笔记失败");
         }
     }
 
     @Override
     @NeedLogin
-    @Transactional
-    public ApiResponse<EmptyVO> deleteCollectionNote(Integer collectionId, UpdateCollectionNoteBody requestBody) {
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteCollectionNote(Integer collectionId, UpdateCollectionNoteBody requestBody) {
         Long creatorId = requestScopeData.getUserId();
         Collection collection = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
         if (collection == null) {
-            return ApiResponseUtil.error("收藏夹不存在或者没有权限删除笔记");
+            throw new ForbiddenException("收藏夹不存在或者没有权限删除笔记");
         }
 
         Integer noteId = requestBody.getNoteId();
         Note note = noteMapper.findById(noteId);
         if (note == null) {
-            return ApiResponseUtil.error("笔记不存在");
+            throw new NotFoundException("笔记不存在");
         }
 
         CollectionNote collectionNote = collectionNoteMapper.findByCollectionIdAndNoteId(collectionId, noteId);
         if (collectionNote == null) {
-            return ApiResponseUtil.error("该收藏夹不存在目标笔记");
+            throw new NotFoundException("该收藏夹不存在目标笔记");
         }
 
         try {
@@ -130,17 +128,15 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
             if (collectionMapper.countByCreatorIdAndNoteId(creatorId, noteId) == 0) {
                 noteMapper.unCollectNote(noteId);
             }
-
-            return ApiResponseUtil.success("删除收藏夹笔记成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("删除收藏夹笔记失败");
+            throw new BaseException("删除收藏夹笔记失败");
         }
     }
 
     @Override
     @NeedLogin
-    @Transactional
-    public ApiResponse<EmptyVO> batchModifyCollection(UpdateCollectionNoteBatchBody requestBody) {
+    @Transactional(rollbackFor = Exception.class)
+    public void batchModifyCollection(UpdateCollectionNoteBatchBody requestBody) {
         Long creatorId = requestScopeData.getUserId();
         Integer noteId = requestBody.getNoteId();
 
@@ -153,7 +149,7 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
             Collection collectionEntity = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
 
             if (collectionEntity == null) {
-                return ApiResponseUtil.error("收藏夹不存在或者没有权限修改");
+                throw new ForbiddenException("收藏夹不存在或者没有权限修改");
             }
 
             if (Objects.equals(action, "create")) {
@@ -167,7 +163,7 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
                     collectionNote.setNoteId(noteId);
                     collectionNoteMapper.insert(collectionNote);
                 } catch (Exception e) {
-                    return ApiResponseUtil.error("收藏失败");
+                    throw new BaseException("收藏失败");
                 }
             } else if (Objects.equals(action, "delete")) {
                 try {
@@ -176,11 +172,10 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
                         noteMapper.unCollectNote(noteId);
                     }
                 } catch (Exception e) {
-                    return ApiResponseUtil.error("取消收藏失败");
+                    throw new BaseException("取消收藏失败");
                 }
             }
         }
-        return ApiResponseUtil.success("操作成功");
     }
 
     @Override

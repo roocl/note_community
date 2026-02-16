@@ -22,33 +22,21 @@ public class ElasticsearchSyncController {
     @ApiOperation("全量同步所有数据到 Elasticsearch")
     @PostMapping("/sync-all")
     public ApiResponse<EmptyVO> syncAll() {
-        try {
-            elasticsearchSyncService.syncAll();
-            return ApiResponseUtil.success("全量同步完成");
-        } catch (Exception e) {
-            return ApiResponseUtil.error("全量同步失败: " + e.getMessage());
-        }
+        elasticsearchSyncService.syncAll();
+        return ApiResponseUtil.success("全量同步完成");
     }
 
     @ApiOperation("全量同步笔记到 Elasticsearch")
     @PostMapping("/sync-notes")
     public ApiResponse<EmptyVO> syncNotes() {
-        try {
-            elasticsearchSyncService.syncAllNotes();
-            return ApiResponseUtil.success("笔记同步完成");
-        } catch (Exception e) {
-            return ApiResponseUtil.error("笔记同步失败: " + e.getMessage());
-        }
+        elasticsearchSyncService.syncAllNotes();
+        return ApiResponseUtil.success("笔记同步完成");
     }
 
     @ApiOperation("全量同步用户到 Elasticsearch")
     @PostMapping("/sync-users")
     public ApiResponse<EmptyVO> syncUsers() {
-        try {
-            elasticsearchSyncService.syncAllUsers();
-            return ApiResponseUtil.success("用户同步完成");
-        } catch (Exception e) {
-            return ApiResponseUtil.error("用户同步失败: " + e.getMessage());
-        }
+        elasticsearchSyncService.syncAllUsers();
+        return ApiResponseUtil.success("用户同步完成");
     }
 }

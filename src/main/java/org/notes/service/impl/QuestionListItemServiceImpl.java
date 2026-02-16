@@ -2,12 +2,12 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.notes.exception.BaseException;
 import org.notes.mapper.NoteMapper;
 import org.notes.mapper.QuestionListItemMapper;
 import org.notes.mapper.QuestionListMapper;
 import org.notes.mapper.UserMapper;
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
+import org.notes.model.base.PageResult;
 import org.notes.model.base.Pagination;
 import org.notes.model.dto.questionList.CreateQuestionListItemBody;
 import org.notes.model.dto.questionList.SortQuestionListItemBody;
@@ -19,14 +19,12 @@ import org.notes.model.vo.questionListItem.QuestionListItemUserVO;
 import org.notes.model.vo.questionListItem.QuestionListItemVO;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.QuestionListItemService;
-import org.notes.utils.ApiResponseUtil;
 import org.notes.utils.PaginationUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -46,7 +44,7 @@ public class QuestionListItemServiceImpl implements QuestionListItemService {
     private final UserMapper userMapper;
 
     @Override
-    public ApiResponse<List<QuestionListItemUserVO>> userGetQuestionListItems(QuestionListItemQueryParams queryParams) {
+    public PageResult<List<QuestionListItemUserVO>> userGetQuestionListItems(QuestionListItemQueryParams queryParams) {
         int offset = PaginationUtils.calculateOffset(queryParams.getPage(), queryParams.getPageSize());
         int total = questionListItemMapper.countByQuestionListId(queryParams.getQuestionListId());
         Pagination pagination = new Pagination(queryParams.getPage(), queryParams.getPageSize(), total);
@@ -92,17 +90,17 @@ public class QuestionListItemServiceImpl implements QuestionListItemService {
             return questionListItemUserVO;
         }).toList();
 
-        return ApiResponseUtil.success("获取用户题单项列表成功", questionListItemUserVOS, pagination);
+        return new PageResult<>(questionListItemUserVOS, pagination);
     }
 
     @Override
-    public ApiResponse<List<QuestionListItemVO>> AdminGetQuestionListItems(Integer questionListId) {
-        List<QuestionListItemVO> questionListItemVOS = questionListItemMapper.findByQuestionListId(questionListId);
-        return ApiResponseUtil.success("获取题单项列表成功", questionListItemVOS);
+    public List<QuestionListItemVO> adminGetQuestionListItems(Integer questionListId) {
+        return questionListItemMapper.findByQuestionListId(questionListId);
     }
 
     @Override
-    public ApiResponse<CreateQuestionListItemVO> createQuestionListItem(CreateQuestionListItemBody body) {
+    @Transactional(rollbackFor = Exception.class)
+    public CreateQuestionListItemVO createQuestionListItem(CreateQuestionListItemBody body) {
         QuestionListItem questionListItem = new QuestionListItem();
         BeanUtils.copyProperties(body, questionListItem);
 
@@ -113,24 +111,25 @@ public class QuestionListItemServiceImpl implements QuestionListItemService {
             questionListItemMapper.insert(questionListItem);
             CreateQuestionListItemVO createQuestionListItemVO = new CreateQuestionListItemVO();
             createQuestionListItemVO.setRank(questionListItem.getRank());
-            return ApiResponseUtil.success("创建题单项成功", createQuestionListItemVO);
+            return createQuestionListItemVO;
         } catch (Exception e) {
-            return ApiResponseUtil.error("创建题单项失败");
+            throw new BaseException("创建题单项失败");
         }
     }
 
     @Override
-    public ApiResponse<EmptyVO> deleteQuestionListItem(Integer questionListId, Integer questionId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteQuestionListItem(Integer questionListId, Integer questionId) {
         try {
             questionListItemMapper.deleteByQuestionListIdAndQuestionId(questionListId, questionId);
-            return ApiResponseUtil.success("删除题单项成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("删除题单项失败");
+            throw new BaseException("删除题单项失败");
         }
     }
 
     @Override
-    public ApiResponse<EmptyVO> sortQuestionListItem(SortQuestionListItemBody body) {
+    @Transactional(rollbackFor = Exception.class)
+    public void sortQuestionListItem(SortQuestionListItemBody body) {
         List<Integer> questionIds = body.getQuestionIds();
         Integer questionListId = body.getQuestionListId();
 
@@ -142,9 +141,8 @@ public class QuestionListItemServiceImpl implements QuestionListItemService {
                 questionListItem.setRank(i + 1);
                 questionListItemMapper.updateQuestionRank(questionListItem);
             }
-            return ApiResponseUtil.success("题单项排序成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("题单项排序失败");
+            throw new BaseException("题单项排序失败");
         }
     }
 }

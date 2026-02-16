@@ -3,9 +3,15 @@ package org.notes.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.notes.annotation.NeedLogin;
-import org.notes.mapper.*;
-import org.notes.model.base.ApiResponse;
-import org.notes.model.base.EmptyVO;
+import org.notes.exception.BaseException;
+import org.notes.exception.ForbiddenException;
+import org.notes.exception.NotFoundException;
+import org.notes.mapper.CommentLikeMapper;
+import org.notes.mapper.CommentMapper;
+import org.notes.mapper.MessageMapper;
+import org.notes.mapper.NoteMapper;
+import org.notes.mapper.UserMapper;
+import org.notes.model.base.PageResult;
 import org.notes.model.base.Pagination;
 import org.notes.model.dto.comment.CommentQueryParams;
 import org.notes.model.dto.comment.CreateCommentRequest;
@@ -22,15 +28,18 @@ import org.notes.model.vo.user.UserActionVO;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.CommentService;
 import org.notes.service.MessageService;
-import org.notes.utils.ApiResponseUtil;
 import org.notes.utils.PaginationUtils;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -39,28 +48,21 @@ import java.util.stream.Collectors;
 public class CommentServiceImpl implements CommentService {
 
     private final CommentMapper commentMapper;
-
     private final NoteMapper noteMapper;
-
     private final UserMapper userMapper;
-
     private final CommentLikeMapper commentLikeMapper;
-
     private final MessageService messageService;
-
     private final RequestScopeData requestScopeData;
     private final MessageMapper messageMapper;
 
-
     @Override
     @NeedLogin
-    @Transactional
-    public ApiResponse<Integer> createComment(CreateCommentRequest request) {
+    @Transactional(rollbackFor = Exception.class)
+    public Integer createComment(CreateCommentRequest request) {
         try {
             Note note = noteMapper.findById(request.getNoteId());
-
             if (note == null) {
-                return ApiResponseUtil.error("笔记不存在");
+                throw new NotFoundException("笔记不存在");
             }
 
             Long userId = requestScopeData.getUserId();
@@ -69,14 +71,12 @@ public class CommentServiceImpl implements CommentService {
             Comment comment = new Comment();
             comment.setNoteId(request.getNoteId());
             comment.setAuthorId(userId);
-            comment.setNoteId(request.getNoteId());
             comment.setParentId(parentId);
             comment.setContent(request.getContent());
             comment.setLikeCount(0);
             comment.setReplyCount(0);
 
             commentMapper.insert(comment);
-
             noteMapper.incrementCommentCount(request.getNoteId());
 
             if (parentId != null) {
@@ -88,77 +88,73 @@ public class CommentServiceImpl implements CommentService {
             messageDTO.setSenderId(userId);
             messageDTO.setType(MessageType.COMMENT);
             messageDTO.setTargetId(request.getNoteId());
-            if (parentId != null) {
-                messageDTO.setTargetType(MessageTargetType.COMMENT);
-            } else {
-                messageDTO.setTargetType(MessageTargetType.NOTE);
-            }
+            messageDTO.setTargetType(parentId != null ? MessageTargetType.COMMENT : MessageTargetType.NOTE);
             messageDTO.setContent(request.getContent());
             messageDTO.setIsRead(false);
 
             messageService.createMessage(messageDTO);
 
-            return ApiResponse.success(comment.getCommentId());
+            return comment.getCommentId();
+        } catch (BaseException e) {
+            throw e;
         } catch (Exception e) {
             log.error("创建评论失败", e);
-            return ApiResponseUtil.error("创建评论失败: " + e.getMessage());
+            throw new BaseException("创建评论失败: " + e.getMessage());
         }
     }
 
     @Override
     @NeedLogin
-    @Transactional
-    public ApiResponse<EmptyVO> updateComment(Integer commentId, UpdateCommentRequest request) {
+    @Transactional(rollbackFor = Exception.class)
+    public void updateComment(Integer commentId, UpdateCommentRequest request) {
         Long userId = requestScopeData.getUserId();
         Comment comment = commentMapper.findById(commentId);
 
         if (comment == null) {
-            return ApiResponseUtil.error("评论不存在");
+            throw new NotFoundException("评论不存在");
         }
 
         if (!Objects.equals(comment.getAuthorId(), userId)) {
-            return ApiResponseUtil.error("没有权限修改该评论");
+            throw new ForbiddenException("没有权限修改该评论");
         }
 
         try {
             comment.setContent(request.getContent());
             commentMapper.update(comment);
-            return ApiResponseUtil.success("更新评论成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("更新评论失败");
+            throw new BaseException("更新评论失败");
         }
     }
 
     @Override
     @NeedLogin
-    @Transactional
-    public ApiResponse<EmptyVO> deleteComment(Integer commentId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteComment(Integer commentId) {
         Long userId = requestScopeData.getUserId();
         Comment comment = commentMapper.findById(commentId);
 
         if (comment == null) {
-            return ApiResponseUtil.error("评论不存在");
+            throw new NotFoundException("评论不存在");
         }
 
         if (!Objects.equals(comment.getAuthorId(), userId)) {
-            return ApiResponseUtil.error("没有权限删除该评论");
+            throw new ForbiddenException("没有权限删除该评论");
         }
 
         try {
             commentMapper.deleteById(commentId);
-            return ApiResponseUtil.success("删除评论成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("删除评论失败");
+            throw new BaseException("删除评论失败");
         }
     }
 
     @Override
-    public ApiResponse<List<CommentVO>> getComments(CommentQueryParams params) {
+    public PageResult<List<CommentVO>> getComments(CommentQueryParams params) {
         try {
             List<Comment> comments = commentMapper.findByNoteId(params.getNoteId());
 
             if (CollectionUtils.isEmpty(comments)) {
-                return ApiResponseUtil.success("该笔记没有评论", Collections.emptyList());
+                return new PageResult<>(Collections.emptyList(), new Pagination(params.getPage(), params.getPageSize(), 0));
             }
 
             List<Comment> firstLevel = comments.stream()
@@ -168,7 +164,7 @@ public class CommentServiceImpl implements CommentService {
 
             int from = PaginationUtils.calculateOffset(params.getPage(), params.getPageSize());
             if (from >= firstLevel.size()) {
-                return ApiResponseUtil.success("起始索引超出最大索引", Collections.emptyList());
+                return new PageResult<>(Collections.emptyList(), new Pagination(params.getPage(), params.getPageSize(), firstLevel.size()));
             }
 
             int to = Math.min(from + params.getPageSize(), firstLevel.size());
@@ -178,36 +174,27 @@ public class CommentServiceImpl implements CommentService {
                     .filter(c -> c.getParentId() != null)
                     .collect(Collectors.groupingBy(Comment::getParentId));
 
-            List<Long> authorIds = comments.stream()
-                    .map(Comment::getAuthorId)
-                    .collect(Collectors.toList());
-
+            List<Long> authorIds = comments.stream().map(Comment::getAuthorId).toList();
             Map<Long, User> authorMap = userMapper.findByIdBatch(authorIds)
                     .stream()
                     .collect(Collectors.toMap(User::getUserId, u -> u));
 
             Long userId = requestScopeData.getUserId();
-
             Set<Integer> likedSet;
             if (userId != null) {
-                List<Integer> allCommentIds = comments.stream()
-                        .map(Comment::getCommentId)
-                        .toList();
+                List<Integer> allCommentIds = comments.stream().map(Comment::getCommentId).toList();
                 likedSet = new HashSet<>(commentLikeMapper.findUserLikedCommentIds(userId, allCommentIds));
             } else {
                 likedSet = Collections.emptySet();
             }
 
-            List<CommentVO> result = pagedFirst.stream()
-                    .map(c -> toVO(c, repliesMap, authorMap, likedSet))
-                    .toList();
-
+            List<CommentVO> result = pagedFirst.stream().map(c -> toVO(c, repliesMap, authorMap, likedSet)).toList();
             Pagination pagination = new Pagination(params.getPage(), params.getPageSize(), firstLevel.size());
 
-            return ApiResponseUtil.success("获取评论列表成功", result, pagination);
+            return new PageResult<>(result, pagination);
         } catch (Exception e) {
             log.error("获取评论列表失败", e);
-            return ApiResponseUtil.error("获取评论列表失败");
+            throw new BaseException("获取评论列表失败");
         }
     }
 
@@ -256,13 +243,13 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @NeedLogin
-    @Transactional
-    public ApiResponse<EmptyVO> likeComment(Integer commentId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void likeComment(Integer commentId) {
         Long userId = requestScopeData.getUserId();
         Comment comment = commentMapper.findById(commentId);
 
         if (comment == null) {
-            return ApiResponseUtil.error("评论不存在");
+            throw new NotFoundException("评论不存在");
         }
 
         try {
@@ -282,31 +269,27 @@ public class CommentServiceImpl implements CommentService {
             messageDTO.setIsRead(false);
 
             messageService.createMessage(messageDTO);
-            return ApiResponseUtil.success("点赞评论成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("点赞评论失败");
+            throw new BaseException("点赞评论失败");
         }
     }
 
     @Override
     @NeedLogin
-    @Transactional
-    public ApiResponse<EmptyVO> unlikeComment(Integer commentId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void unlikeComment(Integer commentId) {
         Long userId = requestScopeData.getUserId();
         Comment comment = commentMapper.findById(commentId);
 
         if (comment == null) {
-            return ApiResponseUtil.error("评论不存在");
+            throw new NotFoundException("评论不存在");
         }
 
         try {
             commentMapper.decrementLikeCount(commentId);
-
             commentLikeMapper.delete(commentId, userId);
-
-            return ApiResponseUtil.success("取消点赞评论成功");
         } catch (Exception e) {
-            return ApiResponseUtil.error("取消点赞评论失败");
+            throw new BaseException("取消点赞评论失败");
         }
     }
 }

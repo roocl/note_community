@@ -10,6 +10,7 @@ import org.notes.model.dto.collection.UpdateCollectionBody;
 import org.notes.model.vo.collection.CollectionVO;
 import org.notes.model.vo.collection.CreateCollectionVO;
 import org.notes.service.CollectionService;
+import org.notes.utils.ApiResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.notes.model.base.EmptyVO;
@@ -30,14 +31,14 @@ public class CollectionController {
     @GetMapping("/collections")
     public ApiResponse<List<CollectionVO>> getCollections(
             @Valid CollectionQueryParams queryParams) {
-        return collectionService.getCollections(queryParams);
+        return ApiResponseUtil.success("获取收藏夹列表成功", collectionService.getCollections(queryParams));
     }
 
     @ApiOperation("创建收藏夹")
     @PostMapping("/collections")
     public ApiResponse<CreateCollectionVO> createCollection(
             @Valid @RequestBody CreateCollectionBody requestBody) {
-        return collectionService.createCollection(requestBody);
+        return ApiResponseUtil.success("新建收藏夹成功", collectionService.createCollection(requestBody));
     }
 
     @ApiOperation("修改收藏夹")
@@ -45,13 +46,15 @@ public class CollectionController {
     public ApiResponse<EmptyVO> updateCollection(
             @ApiParam("收藏夹ID") @Min(value = 1, message = "collectionId 必须为正整数") @PathVariable Integer collectionId,
             @Valid @RequestBody UpdateCollectionBody updateBody) {
-        return collectionService.updateCollection(collectionId, updateBody);
+        collectionService.updateCollection(collectionId, updateBody);
+        return ApiResponseUtil.success("修改收藏夹成功");
     }
 
     @ApiOperation("删除收藏夹")
     @DeleteMapping("/collections/{collectionId}")
     public ApiResponse<EmptyVO> deleteCollection(
             @ApiParam("收藏夹ID") @PathVariable @Min(value = 1, message = "collectionId 必须为正整数") Integer collectionId) {
-        return collectionService.deleteCollection(collectionId);
+        collectionService.deleteCollection(collectionId);
+        return ApiResponseUtil.success("删除收藏夹成功");
     }
 }
