@@ -31,7 +31,7 @@ public class StatisticServiceImpl implements StatisticService {
             List<Statistic> statistics = statisticMapper.findByPage(pageSize, offset);
             return new PageResult<>(statistics, pagination);
         } catch (Exception e) {
-            throw new BaseException("获取统计列表失败 " + e.getMessage());
+            throw new BaseException("获取统计列表失败", e);
         }
 
     }

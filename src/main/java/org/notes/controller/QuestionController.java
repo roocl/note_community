@@ -3,6 +3,7 @@ package org.notes.controller;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import org.notes.annotation.NeedAdmin;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
 import org.notes.model.base.PageResult;
@@ -56,6 +57,7 @@ public class QuestionController {
 
     @ApiOperation("获取题目列表（管理端）")
     @GetMapping("/admin/questions")
+    @NeedAdmin
     public ApiResponse<List<QuestionVO>> adminGetQuestions(@Valid QuestionQueryParams queryParam) {
         PageResult<List<QuestionVO>> result = questionService.adminGetQuestions(queryParam);
         return ApiResponseUtil.success("获取问题列表成功", result.getData(), result.getPagination());
@@ -63,6 +65,7 @@ public class QuestionController {
 
     @ApiOperation("创建题目（管理端）")
     @PostMapping("/admin/questions")
+    @NeedAdmin
     public ApiResponse<CreateQuestionVO> adminCreateQuestion(
             @Valid @RequestBody CreateQuestionBody createQuestionBody) {
         return ApiResponseUtil.success("创建问题成功", questionService.adminCreateQuestion(createQuestionBody));
@@ -70,6 +73,7 @@ public class QuestionController {
 
     @ApiOperation("更新题目（管理端）")
     @PatchMapping("/admin/questions/{questionId}")
+    @NeedAdmin
     public ApiResponse<EmptyVO> adminUpdateQuestion(
             @ApiParam("题目ID") @Min(value = 1, message = "questionId必须为正整数") @PathVariable Integer questionId,
             @Valid @RequestBody UpdateQuestionBody updateQuestionBody) {
@@ -79,6 +83,7 @@ public class QuestionController {
 
     @ApiOperation("删除题目（管理端）")
     @DeleteMapping("/admin/questions/{questionId}")
+    @NeedAdmin
     public ApiResponse<EmptyVO> adminDeleteQuestion(
             @ApiParam("题目ID") @Min(value = 1, message = "questionId 必须为正整数") @PathVariable Integer questionId) {
         questionService.adminDeleteQuestion(questionId);

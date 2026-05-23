@@ -85,7 +85,7 @@ public class CollectionServiceImpl implements CollectionService {
 
             return createCollectionVO;
         } catch (Exception e) {
-            throw new BaseException("新建收藏夹失败");
+            throw new BaseException("新建收藏夹失败", e);
         }
     }
 
@@ -108,7 +108,7 @@ public class CollectionServiceImpl implements CollectionService {
 
             collectionMapper.update(collection);
         } catch (Exception e) {
-            throw new BaseException("修改收藏夹失败");
+            throw new BaseException("修改收藏夹失败", e);
         }
     }
 
@@ -127,7 +127,7 @@ public class CollectionServiceImpl implements CollectionService {
             collectionMapper.deleteById(collectionId);
             collectionNoteMapper.deleteByCollectionId(collectionId);
         } catch (Exception e) {
-            throw new BaseException("删除收藏夹失败");
+            throw new BaseException("删除收藏夹失败", e);
         }
     }
 

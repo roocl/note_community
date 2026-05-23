@@ -60,8 +60,7 @@ public class DailyStatistics {
             statisticMapper.insert(statistic);
             log.info("[定时任务]统计每日数据, 插入数据成功, statistic={}", statistic);
         } catch (Exception e) {
-            log.error("[定时任务]统计每日数据, 插入数据失败, statistic={}, 错误详情={}", statistic, e.getMessage());
-            e.printStackTrace();
+            log.error("[定时任务]统计每日数据, 插入数据失败, statistic={}, 错误详情={}", statistic, e);
         }
     }
 }

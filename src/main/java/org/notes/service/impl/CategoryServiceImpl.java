@@ -79,11 +79,13 @@ public class CategoryServiceImpl implements CategoryService {
         try {
             int deleteCount = categoryMapper.deleteByIdBatch(categoryIds);
             if (deleteCount != categoryIds.size()) {
-                throw new BaseException("删除分类失败");
+                throw new BaseException(500, "删除分类失败");
             }
             questionMapper.deleteByCategoryId(categoryId);
+        } catch (BaseException e) {
+            throw e;
         } catch (Exception e) {
-            throw new BaseException("删除分类失败");
+            throw new BaseException("删除分类失败", e);
         }
     }
 
@@ -106,7 +108,7 @@ public class CategoryServiceImpl implements CategoryService {
             createCategoryVO.setCategoryId(category.getCategoryId());
             return createCategoryVO;
         } catch (Exception e) {
-            throw new BaseException("创建分类失败");
+            throw new BaseException("创建分类失败", e);
         }
     }
 
@@ -124,11 +126,12 @@ public class CategoryServiceImpl implements CategoryService {
         try {
             categoryMapper.update(category);
         } catch (Exception e) {
-            throw new BaseException("更新分类失败");
+            throw new BaseException("更新分类失败", e);
         }
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Category findOrCreateCategory(String categoryName, Integer parentCategoryId) {
         Category category = categoryMapper.findByName(categoryName);
 
@@ -143,7 +146,7 @@ public class CategoryServiceImpl implements CategoryService {
             categoryMapper.insert(newCategory);
             return newCategory;
         } catch (Exception e) {
-            throw new BaseException("创建分类失败");
+            throw new BaseException("创建分类失败", e);
         }
     }
 }

@@ -115,7 +115,7 @@ public class NoteServiceImpl implements NoteService {
 
             return new PageResult<>(noteVOs, pagination);
         } catch (Exception e) {
-            throw new BaseException("获取笔记列表失败");
+            throw new BaseException("获取笔记列表失败", e);
         }
     }
 
@@ -147,7 +147,7 @@ public class NoteServiceImpl implements NoteService {
             CreateNoteVO createNoteVO = new CreateNoteVO();
             return createNoteVO;
         } catch (Exception e) {
-            throw new BaseException("创建笔记失败");
+            throw new BaseException("创建笔记失败", e);
         }
     }
 
@@ -176,7 +176,7 @@ public class NoteServiceImpl implements NoteService {
             // 同步到 Elasticsearch
             syncNoteToEs(note);
         } catch (Exception e) {
-            throw new BaseException("更新笔记失败");
+            throw new BaseException("更新笔记失败", e);
         }
     }
 
@@ -204,7 +204,7 @@ public class NoteServiceImpl implements NoteService {
                 log.warn("删除笔记ES索引失败，noteId={}", noteId, esEx);
             }
         } catch (Exception e) {
-            throw new BaseException("删除笔记失败");
+            throw new BaseException("删除笔记失败", e);
         }
     }
 

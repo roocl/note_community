@@ -25,7 +25,7 @@ public class SecurityConfig {
                 .authorizeRequests()
                 .antMatchers("/api/**").permitAll()
                 .antMatchers("/doc.html", "/webjars/**", "/swagger-resources/**", "/v2/api-docs").permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
                 .and()
                 .formLogin().disable()
                 .httpBasic().disable();

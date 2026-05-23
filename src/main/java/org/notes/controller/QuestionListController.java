@@ -3,6 +3,7 @@ package org.notes.controller;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import org.notes.annotation.NeedAdmin;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.questionList.CreateQuestionListBody;
@@ -28,6 +29,7 @@ public class QuestionListController {
 
     @ApiOperation("获取题单详情（管理端）")
     @GetMapping("/admin/questionlists/{questionListId}")
+    @NeedAdmin
     public ApiResponse<QuestionList> getQuestionList(
             @ApiParam("题单ID") @Min(value = 1, message = "questionListId 必须为正整数") @PathVariable Integer questionListId) {
         return ApiResponseUtil.success("获取题单成功", questionListService.getQuestionList(questionListId));
@@ -35,18 +37,21 @@ public class QuestionListController {
 
     @ApiOperation("获取题单列表（管理端）")
     @GetMapping("/admin/questionlists")
+    @NeedAdmin
     public ApiResponse<List<QuestionList>> getQuestionLists() {
         return ApiResponseUtil.success("获取所有题单成功", questionListService.getQuestionLists());
     }
 
     @ApiOperation("创建题单（管理端）")
     @PostMapping("/admin/questionlists")
+    @NeedAdmin
     public ApiResponse<CreateQuestionListVO> createQuestionList(@Valid @RequestBody CreateQuestionListBody body) {
         return ApiResponseUtil.success("创建题单成功", questionListService.createQuestionList(body));
     }
 
     @ApiOperation("删除题单（管理端）")
     @DeleteMapping("/admin/questionlists/{questionListId}")
+    @NeedAdmin
     public ApiResponse<EmptyVO> deleteQuestionList(
             @ApiParam("题单ID") @Min(value = 1, message = "questionListId 必须为正整数") @PathVariable Integer questionListId) {
         questionListService.deleteQuestionList(questionListId);
@@ -55,6 +60,7 @@ public class QuestionListController {
 
     @ApiOperation("更新题单（管理端）")
     @PatchMapping("/admin/questionlists/{questionListId}")
+    @NeedAdmin
     public ApiResponse<EmptyVO> updateQuestionList(
             @ApiParam("题单ID") @Min(value = 1, message = "questionListId 必须为正整数") @PathVariable Integer questionListId,
             @Valid @RequestBody UpdateQuestionListBody body) {

@@ -4,6 +4,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import lombok.extern.slf4j.Slf4j;
+import org.notes.annotation.NeedAdmin;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.AuthResult;
 import org.notes.model.base.PageResult;
@@ -59,7 +60,7 @@ public class UserController {
     }
 
     @ApiOperation("获取用户信息")
-    @GetMapping("/user/{userId}")
+    @GetMapping("/users/{userId}")
     public ApiResponse<UserVO> getUserInfo(
             @ApiParam("用户ID") @PathVariable @Pattern(regexp = "\\d+", message = "ID格式错误") Long userId) {
         return ApiResponseUtil.success("获取用户信息成功", userService.getUserInfo(userId));
@@ -81,6 +82,7 @@ public class UserController {
 
     @ApiOperation("获取用户列表（管理端）")
     @GetMapping("/admin/users")
+    @NeedAdmin
     public ApiResponse<List<User>> adminGetUser(
             @Valid UserQueryParams queryParam) {
         PageResult<List<User>> result = userService.getUserList(queryParam);

@@ -99,7 +99,7 @@ public class CommentServiceImpl implements CommentService {
             throw e;
         } catch (Exception e) {
             log.error("创建评论失败", e);
-            throw new BaseException("创建评论失败: " + e.getMessage());
+            throw new BaseException("创建评论失败", e);
         }
     }
 
@@ -122,7 +122,7 @@ public class CommentServiceImpl implements CommentService {
             comment.setContent(request.getContent());
             commentMapper.update(comment);
         } catch (Exception e) {
-            throw new BaseException("更新评论失败");
+            throw new BaseException("更新评论失败", e);
         }
     }
 
@@ -144,7 +144,7 @@ public class CommentServiceImpl implements CommentService {
         try {
             commentMapper.deleteById(commentId);
         } catch (Exception e) {
-            throw new BaseException("删除评论失败");
+            throw new BaseException("删除评论失败", e);
         }
     }
 
@@ -194,7 +194,7 @@ public class CommentServiceImpl implements CommentService {
             return new PageResult<>(result, pagination);
         } catch (Exception e) {
             log.error("获取评论列表失败", e);
-            throw new BaseException("获取评论列表失败");
+            throw new BaseException("获取评论列表失败", e);
         }
     }
 
@@ -270,7 +270,7 @@ public class CommentServiceImpl implements CommentService {
 
             messageService.createMessage(messageDTO);
         } catch (Exception e) {
-            throw new BaseException("点赞评论失败");
+            throw new BaseException("点赞评论失败", e);
         }
     }
 
@@ -289,7 +289,7 @@ public class CommentServiceImpl implements CommentService {
             commentMapper.decrementLikeCount(commentId);
             commentLikeMapper.delete(commentId, userId);
         } catch (Exception e) {
-            throw new BaseException("取消点赞评论失败");
+            throw new BaseException("取消点赞评论失败", e);
         }
     }
 }

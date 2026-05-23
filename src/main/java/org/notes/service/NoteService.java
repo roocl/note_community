@@ -5,11 +5,9 @@ import org.notes.model.dto.note.CreateNoteRequest;
 import org.notes.model.dto.note.NoteQueryParams;
 import org.notes.model.dto.note.UpdateNoteRequest;
 import org.notes.model.vo.note.*;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Transactional
 public interface NoteService {
     PageResult<List<NoteVO>> getNotes(NoteQueryParams params);
 

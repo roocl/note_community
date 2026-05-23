@@ -49,7 +49,7 @@ public class MessageServiceImpl implements MessageService {
             }
             return messageMapper.insert(message);
         } catch (Exception e) {
-            throw new BaseException("创建消息通知失败: " + e.getMessage());
+            throw new BaseException("创建消息通知失败", e);
         }
     }
 

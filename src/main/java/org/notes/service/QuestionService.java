@@ -7,7 +7,6 @@ import org.notes.model.vo.question.CreateQuestionVO;
 import org.notes.model.vo.question.QuestionNoteVO;
 import org.notes.model.vo.question.QuestionUserVO;
 import org.notes.model.vo.question.QuestionVO;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -18,7 +17,6 @@ import java.util.Map;
  * @author makejava
  * @since 2026-02-06 09:19:46
  */
-@Transactional
 public interface QuestionService {
 
     Question findById(Integer questionId);

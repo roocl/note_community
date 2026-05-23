@@ -113,7 +113,7 @@ public class QuestionListItemServiceImpl implements QuestionListItemService {
             createQuestionListItemVO.setRank(questionListItem.getRank());
             return createQuestionListItemVO;
         } catch (Exception e) {
-            throw new BaseException("创建题单项失败");
+            throw new BaseException("创建题单项失败", e);
         }
     }
 
@@ -123,7 +123,7 @@ public class QuestionListItemServiceImpl implements QuestionListItemService {
         try {
             questionListItemMapper.deleteByQuestionListIdAndQuestionId(questionListId, questionId);
         } catch (Exception e) {
-            throw new BaseException("删除题单项失败");
+            throw new BaseException("删除题单项失败", e);
         }
     }
 
@@ -142,7 +142,7 @@ public class QuestionListItemServiceImpl implements QuestionListItemService {
                 questionListItemMapper.updateQuestionRank(questionListItem);
             }
         } catch (Exception e) {
-            throw new BaseException("题单项排序失败");
+            throw new BaseException("题单项排序失败", e);
         }
     }
 }

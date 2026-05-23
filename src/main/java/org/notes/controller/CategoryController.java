@@ -3,6 +3,7 @@ package org.notes.controller;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import org.notes.annotation.NeedAdmin;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
 import org.notes.model.dto.category.CreateCategoryBody;
@@ -40,12 +41,14 @@ public class CategoryController {
 
     @ApiOperation("获取分类列表（管理端）")
     @GetMapping("/admin/categories")
+    @NeedAdmin
     public ApiResponse<List<CategoryVO>> categories() {
         return ApiResponseUtil.success("获取分类列表成功", categoryService.categoryList());
     }
 
     @ApiOperation("新增分类")
     @PostMapping("/admin/categories")
+    @NeedAdmin
     public ApiResponse<CreateCategoryVO> createCategory(
             @Valid @RequestBody CreateCategoryBody createCategoryBody) {
         return ApiResponseUtil.success("创建分类成功", categoryService.createCategory(createCategoryBody));
@@ -53,6 +56,7 @@ public class CategoryController {
 
     @ApiOperation("更新分类")
     @PatchMapping("/admin/categories/{categoryId}")
+    @NeedAdmin
     public ApiResponse<EmptyVO> updateCategory(
             @ApiParam("分类ID") @Min(value = 1, message = "categoryId 必须为正整数") @PathVariable Integer categoryId,
             @Valid @RequestBody UpdateCategoryBody updateCategoryBody) {
@@ -62,6 +66,7 @@ public class CategoryController {
 
     @ApiOperation("删除分类")
     @DeleteMapping("/admin/categories/{categoryId}")
+    @NeedAdmin
     public ApiResponse<EmptyVO> deleteCategory(
             @ApiParam("分类ID") @Min(value = 1, message = "categoryId 必须为正整数") @PathVariable Integer categoryId) {
         categoryService.deleteCategory(categoryId);

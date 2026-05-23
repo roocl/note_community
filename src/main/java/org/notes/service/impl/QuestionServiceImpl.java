@@ -185,7 +185,7 @@ public class QuestionServiceImpl implements QuestionService {
             createQuestionVO.setQuestionId(question.getQuestionId());
             return createQuestionVO;
         } catch (Exception e) {
-            throw new BaseException("创建问题失败");
+            throw new BaseException("创建问题失败", e);
         }
     }
 
@@ -199,7 +199,7 @@ public class QuestionServiceImpl implements QuestionService {
         try {
             questionMapper.update(question);
         } catch (Exception e) {
-            throw new BaseException("更新问题失败");
+            throw new BaseException("更新问题失败", e);
         }
     }
 
@@ -209,7 +209,7 @@ public class QuestionServiceImpl implements QuestionService {
         if (questionMapper.deleteById(questionId) > 0) {
             return;
         } else {
-            throw new BaseException("删除问题失败");
+            throw new NotFoundException("问题不存在");
         }
     }
 }

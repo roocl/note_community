@@ -33,6 +33,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
@@ -90,6 +92,13 @@ public class UserServiceImpl implements UserService {
         BeanUtils.copyProperties(request, user);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                syncUserToEs(user);
+            }
+        });
+
         try {
             userMapper.insert(user);
             String token = jwtUtil.generateToken(user.getUserId());
@@ -101,9 +110,7 @@ public class UserServiceImpl implements UserService {
             return new AuthResult<>(registerVO, token);
         } catch (Exception e) {
             log.error("注册失败", e);
-            throw new BaseException("注册失败，请稍后再试");
-        } finally {
-            syncUserToEs(user);
+            throw new BaseException("注册失败，请稍后再试", e);
         }
     }
 
@@ -159,7 +166,7 @@ public class UserServiceImpl implements UserService {
         } catch (BaseException e) {
             throw e;
         } catch (Exception e) {
-            throw new BaseException("系统错误");
+            throw new BaseException("系统错误", e);
         }
     }
 
@@ -201,7 +208,7 @@ public class UserServiceImpl implements UserService {
             BeanUtils.copyProperties(fullUser, loginUserVO);
             return loginUserVO;
         } catch (Exception e) {
-            throw new BaseException("更新用户信息失败");
+            throw new BaseException("更新用户信息失败", e);
         }
     }
 
@@ -213,7 +220,7 @@ public class UserServiceImpl implements UserService {
             avatarVO.setUrl(url);
             return avatarVO;
         } catch (Exception e) {
-            throw new BaseException(e.getMessage());
+            throw new BaseException(e.getMessage(), e);
         }
     }
 
@@ -227,7 +234,7 @@ public class UserServiceImpl implements UserService {
             List<User> users = userMapper.findByQueryParam(queryParam, queryParam.getPageSize(), offset);
             return new PageResult<>(users, pagination);
         } catch (Exception e) {
-            throw new BaseException(e.getMessage());
+            throw new BaseException(e.getMessage(), e);
         }
     }
 

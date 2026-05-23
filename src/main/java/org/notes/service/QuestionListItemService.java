@@ -7,11 +7,9 @@ import org.notes.model.dto.questionListItem.QuestionListItemQueryParams;
 import org.notes.model.vo.questionListItem.CreateQuestionListItemVO;
 import org.notes.model.vo.questionListItem.QuestionListItemUserVO;
 import org.notes.model.vo.questionListItem.QuestionListItemVO;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Transactional
 public interface QuestionListItemService {
 
     PageResult<List<QuestionListItemUserVO>> userGetQuestionListItems(QuestionListItemQueryParams queryParams);

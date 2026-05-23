@@ -5,11 +5,9 @@ import org.notes.model.dto.comment.CommentQueryParams;
 import org.notes.model.dto.comment.CreateCommentRequest;
 import org.notes.model.dto.comment.UpdateCommentRequest;
 import org.notes.model.vo.comment.CommentVO;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Transactional
 public interface CommentService {
 
     Integer createComment(CreateCommentRequest request);

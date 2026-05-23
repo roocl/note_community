@@ -17,6 +17,7 @@ import org.notes.service.NoteLikeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -34,7 +35,8 @@ public class NoteLikeServiceImpl implements NoteLikeService {
 
     @Override
     public Set<Integer> findUserLikedNoteIds(Long userId, List<Integer> noteIds) {
-        return Set.of();
+        List<Integer> likedIds = noteLikeMapper.findUserLikedNoteIds(userId, noteIds);
+        return new HashSet<>(likedIds);
     }
 
     @Override
@@ -65,7 +67,7 @@ public class NoteLikeServiceImpl implements NoteLikeService {
             messageDTO.setIsRead(false);
             messageService.createMessage(messageDTO);
         } catch (Exception e) {
-            throw new BaseException("点赞失败");
+            throw new BaseException("点赞失败", e);
         }
     }
 
@@ -88,7 +90,7 @@ public class NoteLikeServiceImpl implements NoteLikeService {
                 noteMapper.unlikeNote(noteId);
             }
         } catch (Exception e) {
-            throw new BaseException("取消点赞失败");
+            throw new BaseException("取消点赞失败", e);
         }
     }
 }

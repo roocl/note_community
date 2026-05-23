@@ -11,13 +11,14 @@ import org.notes.model.entity.QuestionList;
 import org.notes.model.vo.questionList.CreateQuestionListVO;
 import org.notes.service.QuestionListService;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(rollbackFor = Exception.class)
 public class QuestionListServiceImpl implements QuestionListService {
 
     private final QuestionListMapper questionListMapper;
@@ -50,7 +51,7 @@ public class QuestionListServiceImpl implements QuestionListService {
 
             return createQuestionListVO;
         } catch (Exception e) {
-            throw new BaseException("创建题单失败");
+            throw new BaseException("创建题单失败", e);
         }
     }
 
@@ -66,7 +67,7 @@ public class QuestionListServiceImpl implements QuestionListService {
             questionListMapper.deleteById(questionListId);
             questionListItemMapper.deleteByQuestionListId(questionListId);
         } catch (Exception e) {
-            throw new BaseException("删除题单失败");
+            throw new BaseException("删除题单失败", e);
         }
     }
 
@@ -82,7 +83,7 @@ public class QuestionListServiceImpl implements QuestionListService {
         try {
             questionListMapper.update(questionList);
         } catch (Exception e) {
-            throw new BaseException("更新题单失败");
+            throw new BaseException("更新题单失败", e);
         }
     }
 }

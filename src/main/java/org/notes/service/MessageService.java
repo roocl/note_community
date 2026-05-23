@@ -2,11 +2,9 @@ package org.notes.service;
 
 import org.notes.model.dto.message.MessageDTO;
 import org.notes.model.vo.message.MessageVO;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Transactional
 public interface MessageService {
 
     Integer createMessage(MessageDTO messageDTO);

@@ -2,6 +2,7 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.notes.annotation.NeedLogin;
+import org.notes.exception.BadRequestException;
 import org.notes.exception.BaseException;
 import org.notes.exception.ForbiddenException;
 import org.notes.exception.NotFoundException;
@@ -58,7 +59,7 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
             }).toList();
             return noteVOS;
         } catch (Exception e) {
-            throw new BaseException("查询收藏夹笔记失败");
+            throw new BaseException("查询收藏夹笔记失败", e);
         }
     }
 
@@ -81,7 +82,7 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
         CollectionNote collectionNote = collectionNoteMapper.findByCollectionIdAndNoteId(collectionId, noteId);
 
         if (collectionNote != null) {
-            throw new BaseException("该收藏夹已存在目标笔记，请勿重复添加");
+            throw new BadRequestException("该收藏夹已存在目标笔记，请勿重复添加");
         }
 
         try {
@@ -96,7 +97,7 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
                 noteMapper.collectNote(noteId);
             }
         } catch (Exception e) {
-            throw new BaseException("添加收藏夹笔记失败");
+            throw new BaseException("添加收藏夹笔记失败", e);
         }
     }
 
@@ -129,7 +130,7 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
                 noteMapper.unCollectNote(noteId);
             }
         } catch (Exception e) {
-            throw new BaseException("删除收藏夹笔记失败");
+            throw new BaseException("删除收藏夹笔记失败", e);
         }
     }
 
@@ -163,7 +164,7 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
                     collectionNote.setNoteId(noteId);
                     collectionNoteMapper.insert(collectionNote);
                 } catch (Exception e) {
-                    throw new BaseException("收藏失败");
+                    throw new BaseException("收藏失败", e);
                 }
             } else if (Objects.equals(action, "delete")) {
                 try {
@@ -172,7 +173,7 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
                         noteMapper.unCollectNote(noteId);
                     }
                 } catch (Exception e) {
-                    throw new BaseException("取消收藏失败");
+                    throw new BaseException("取消收藏失败", e);
                 }
             }
         }

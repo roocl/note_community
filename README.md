@@ -129,7 +129,7 @@ cd note-backend
 
 ### 2) 配置数据库与环境
 
-- 在 MySQL 中创建数据库（例如 `kamanote_tech`）。
+- 在 MySQL 中创建数据库。
 - 修改 `src/main/resources/application-dev.yaml` 中的数据源配置。
 - 根据本地环境调整 `src/main/resources/application.yaml` 中 Redis、RabbitMQ、Elasticsearch、邮件配置。
 

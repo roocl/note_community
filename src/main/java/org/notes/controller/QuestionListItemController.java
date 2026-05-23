@@ -3,6 +3,7 @@ package org.notes.controller;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import org.notes.annotation.NeedAdmin;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
 import org.notes.model.base.PageResult;
@@ -39,6 +40,7 @@ public class QuestionListItemController {
 
     @ApiOperation("获取题单项列表（管理端）")
     @GetMapping("/admin/questionlist-items/{questionListId}")
+    @NeedAdmin
     public ApiResponse<List<QuestionListItemVO>> getQuestionListItems(
             @ApiParam("题单ID") @Min(value = 1, message = "questionListId 必须为正整数") @PathVariable Integer questionListId) {
         return ApiResponseUtil.success("获取题单项列表成功", questionListItemService.adminGetQuestionListItems(questionListId));
@@ -46,6 +48,7 @@ public class QuestionListItemController {
 
     @ApiOperation("创建题单项（管理端）")
     @PostMapping("/admin/questionlist-items")
+    @NeedAdmin
     public ApiResponse<CreateQuestionListItemVO> createQuestionListItem(
             @Valid @RequestBody CreateQuestionListItemBody body) {
         return ApiResponseUtil.success("创建题单项成功", questionListItemService.createQuestionListItem(body));
@@ -53,6 +56,7 @@ public class QuestionListItemController {
 
     @ApiOperation("删除题单项（管理端）")
     @DeleteMapping("/admin/questionlist-items/{questionListId}/{questionId}")
+    @NeedAdmin
     public ApiResponse<EmptyVO> deleteQuestionListItem(
             @ApiParam("题单ID") @Min(value = 1, message = "questionListId 必须为正整数") @PathVariable Integer questionListId,
             @ApiParam("题目ID") @Min(value = 1, message = "questionId 必须为正整数") @PathVariable Integer questionId) {
@@ -62,6 +66,7 @@ public class QuestionListItemController {
 
     @ApiOperation("题单项排序（管理端）")
     @PatchMapping("/admin/questionlist-items/sort")
+    @NeedAdmin
     public ApiResponse<EmptyVO> sortQuestionListItem(
             @Valid @RequestBody SortQuestionListItemBody body) {
         questionListItemService.sortQuestionListItem(body);

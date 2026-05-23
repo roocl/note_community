@@ -11,4 +11,5 @@ public class RequestScopeData {
     private String token;
     private Long userId;
     private boolean isLogin;
+    private Integer isAdmin;
 }

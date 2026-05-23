@@ -3,6 +3,7 @@ package org.notes.controller;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
+import org.notes.annotation.NeedAdmin;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
 import org.notes.service.ElasticsearchSyncService;
@@ -21,6 +22,7 @@ public class ElasticsearchSyncController {
 
     @ApiOperation("全量同步所有数据到 Elasticsearch")
     @PostMapping("/sync-all")
+    @NeedAdmin
     public ApiResponse<EmptyVO> syncAll() {
         elasticsearchSyncService.syncAll();
         return ApiResponseUtil.success("全量同步完成");
@@ -28,6 +30,7 @@ public class ElasticsearchSyncController {
 
     @ApiOperation("全量同步笔记到 Elasticsearch")
     @PostMapping("/sync-notes")
+    @NeedAdmin
     public ApiResponse<EmptyVO> syncNotes() {
         elasticsearchSyncService.syncAllNotes();
         return ApiResponseUtil.success("笔记同步完成");
@@ -35,6 +38,7 @@ public class ElasticsearchSyncController {
 
     @ApiOperation("全量同步用户到 Elasticsearch")
     @PostMapping("/sync-users")
+    @NeedAdmin
     public ApiResponse<EmptyVO> syncUsers() {
         elasticsearchSyncService.syncAllUsers();
         return ApiResponseUtil.success("用户同步完成");

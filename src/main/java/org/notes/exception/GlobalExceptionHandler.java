@@ -17,6 +17,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BaseException.class)
     public ApiResponse<Object> handleBizException(BaseException ex) {
+        if (ex.getCode() >= 500) {
+            log.error("Business exception", ex);
+        }
         return ApiResponse.error(ex.getCode(), ex.getMessage());
     }
 
