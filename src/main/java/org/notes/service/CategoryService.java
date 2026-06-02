@@ -27,4 +27,6 @@ public interface CategoryService {
     void updateCategory(Integer categoryId, UpdateCategoryBody updateCategoryBody);
 
     Category findOrCreateCategory(String categoryName, Integer parentCategoryId);
+
+    Category findById(Integer categoryId);
 }

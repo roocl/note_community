@@ -2,6 +2,8 @@ package org.notes.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.notes.config.RabbitMQConfig;
+import org.notes.exception.BadRequestException;
+import org.notes.exception.BaseException;
 import org.notes.model.enums.redisKey.RedisKey;
 import org.notes.service.EmailService;
 import org.notes.task.email.EmailTask;
@@ -33,37 +35,47 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendVerificationCode(String email) {
-        // 检查发送频率
-        if (isVerificationCodeRateLimited(email)) {
-            throw new RuntimeException("验证码发送太频繁，请60秒后重试");
+        // 原子性检查并设置发送频率限制（Redis 异常时降级放行）
+        String limitKey = RedisKey.registerVerificationLimitCode(email);
+        Boolean acquired = null;
+        try {
+            acquired = redisTemplate.opsForValue()
+                    .setIfAbsent(limitKey, "1", limitExpireSeconds, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("Redis 频率限制检查异常，降级放行。email={}", email, e);
+        }
+        if (Boolean.FALSE.equals(acquired)) {
+            throw new BadRequestException("验证码发送过于频繁，请" + limitExpireSeconds + "秒后再试");
         }
 
         // 生成6位随机验证码
         String verificationCode = RandomCodeUtil.generateNumberCode(6);
 
-        // 实现异步发送邮件的逻辑
         try {
-            // 构造对象
             EmailTask emailTask = new EmailTask();
             emailTask.setEmail(email);
             emailTask.setCode(verificationCode);
             emailTask.setTimestamp(System.currentTimeMillis());
 
-            // 发送消息到rabbitmq
             rabbitTemplate.convertAndSend(RabbitMQConfig.EMAIL_QUEUE, emailTask);
 
-            // 将验证码存入redis，供注册时校验
             String codeKey = RedisKey.registerVerificationCode(email);
-            redisTemplate.opsForValue().set(codeKey, verificationCode, expireMinutes, TimeUnit.MINUTES);
-
-            // 设置发送频率限制标记
-            String limitKey = RedisKey.registerVerificationLimitCode(email);
-            redisTemplate.opsForValue().set(limitKey, "1", limitExpireSeconds, TimeUnit.SECONDS);
+            try {
+                redisTemplate.opsForValue().set(codeKey, verificationCode, expireMinutes, TimeUnit.MINUTES);
+            } catch (Exception e) {
+                log.warn("Redis 验证码存储异常，跳过缓存写入。email={}", email, e);
+            }
 
             log.info("验证码邮件任务已发送到RabbitMQ，邮箱：{}", email);
         } catch (Exception e) {
+            // 发送失败，清除限流标记允许重试
+            try {
+                redisTemplate.delete(limitKey);
+            } catch (Exception ex) {
+                log.warn("Redis 清除限流标记异常。key={}", limitKey, ex);
+            }
             log.error("发送验证码邮件失败", e);
-            throw new RuntimeException("发送验证码失败，请稍后重试");
+            throw new BaseException("发送验证码失败，请稍后重试", e);
         }
     }
 
@@ -77,11 +89,5 @@ public class EmailServiceImpl implements EmailService {
             return true;
         }
         return false;
-    }
-
-    @Override
-    public boolean isVerificationCodeRateLimited(String email) {
-        String redisKey = RedisKey.registerVerificationLimitCode(email);
-        return redisTemplate.opsForValue().get(redisKey) != null;
     }
 }

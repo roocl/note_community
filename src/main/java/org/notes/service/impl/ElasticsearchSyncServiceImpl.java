@@ -4,14 +4,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.notes.mapper.NoteMapper;
 import org.notes.mapper.UserMapper;
+import org.notes.model.entity.Category;
 import org.notes.model.entity.Note;
+import org.notes.model.entity.Question;
 import org.notes.model.entity.User;
 import org.notes.model.es.NoteDocument;
 import org.notes.model.es.UserDocument;
 import org.notes.repository.NoteSearchRepository;
 import org.notes.repository.UserSearchRepository;
+import org.notes.service.CategoryService;
 import org.notes.service.ElasticsearchSyncService;
+import org.notes.service.QuestionService;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.elasticsearch.core.suggest.Completion;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,6 +38,10 @@ public class ElasticsearchSyncServiceImpl implements ElasticsearchSyncService {
 
     private final UserSearchRepository userSearchRepository;
 
+    private final QuestionService questionService;
+
+    private final CategoryService categoryService;
+
     /**
      * 全量同步所有笔记到 Elasticsearch
      */
@@ -44,6 +53,25 @@ public class ElasticsearchSyncServiceImpl implements ElasticsearchSyncService {
             List<NoteDocument> docs = notes.stream().map(note -> {
                 NoteDocument doc = new NoteDocument();
                 BeanUtils.copyProperties(note, doc);
+
+                // 从关联 Question 获取标题和分类名
+                Integer questionId = note.getQuestionId();
+                if (questionId != null) {
+                    Question question = questionService.findById(questionId);
+                    if (question != null) {
+                        if (question.getTitle() != null) {
+                            doc.setTitle(question.getTitle());
+                            doc.setSuggest(new Completion(new String[]{question.getTitle()}));
+                        }
+                        if (question.getCategoryId() != null) {
+                            Category category = categoryService.findById(question.getCategoryId());
+                            if (category != null) {
+                                doc.setCategoryName(category.getName());
+                            }
+                        }
+                    }
+                }
+
                 return doc;
             }).toList();
 

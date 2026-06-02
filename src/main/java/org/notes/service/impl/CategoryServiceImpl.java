@@ -131,6 +131,11 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    public Category findById(Integer categoryId) {
+        return categoryMapper.findById(categoryId);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public Category findOrCreateCategory(String categoryName, Integer parentCategoryId) {
         Category category = categoryMapper.findByName(categoryName);

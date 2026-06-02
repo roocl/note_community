@@ -22,6 +22,9 @@ public class NoteSearchVO {
     @ApiModelProperty("问题ID")
     private Integer questionId;
 
+    @ApiModelProperty("笔记标题（可能包含高亮标签）")
+    private String title;
+
     @ApiModelProperty("笔记内容（可能包含高亮标签）")
     private String content;
 

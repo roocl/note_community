@@ -3,6 +3,7 @@ package org.notes.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.notes.annotation.NeedLogin;
+import org.notes.config.RabbitMQConfig;
 import org.notes.exception.BaseException;
 import org.notes.exception.ForbiddenException;
 import org.notes.exception.NotFoundException;
@@ -16,7 +17,6 @@ import org.notes.model.base.Pagination;
 import org.notes.model.dto.comment.CommentQueryParams;
 import org.notes.model.dto.comment.CreateCommentRequest;
 import org.notes.model.dto.comment.UpdateCommentRequest;
-import org.notes.model.dto.message.MessageDTO;
 import org.notes.model.entity.Comment;
 import org.notes.model.entity.CommentLike;
 import org.notes.model.entity.Note;
@@ -27,9 +27,12 @@ import org.notes.model.vo.comment.CommentVO;
 import org.notes.model.vo.user.UserActionVO;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.CommentService;
-import org.notes.service.MessageService;
+import org.notes.task.notification.NotificationTask;
 import org.notes.utils.PaginationUtils;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
@@ -51,7 +54,7 @@ public class CommentServiceImpl implements CommentService {
     private final NoteMapper noteMapper;
     private final UserMapper userMapper;
     private final CommentLikeMapper commentLikeMapper;
-    private final MessageService messageService;
+    private final RabbitTemplate rabbitTemplate;
     private final RequestScopeData requestScopeData;
     private final MessageMapper messageMapper;
 
@@ -83,16 +86,20 @@ public class CommentServiceImpl implements CommentService {
                 commentMapper.incrementReplyCount(request.getParentId());
             }
 
-            MessageDTO messageDTO = new MessageDTO();
-            messageDTO.setReceiverId(note.getAuthorId());
-            messageDTO.setSenderId(userId);
-            messageDTO.setType(MessageType.COMMENT);
-            messageDTO.setTargetId(request.getNoteId());
-            messageDTO.setTargetType(parentId != null ? MessageTargetType.COMMENT : MessageTargetType.NOTE);
-            messageDTO.setContent(request.getContent());
-            messageDTO.setIsRead(false);
+            NotificationTask notificationTask = new NotificationTask();
+            notificationTask.setReceiverId(note.getAuthorId());
+            notificationTask.setSenderId(userId);
+            notificationTask.setType(MessageType.COMMENT);
+            notificationTask.setTargetId(request.getNoteId());
+            notificationTask.setTargetType(parentId != null ? MessageTargetType.COMMENT : MessageTargetType.NOTE);
+            notificationTask.setContent(request.getContent());
 
-            messageService.createMessage(messageDTO);
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    rabbitTemplate.convertAndSend(RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask);
+                }
+            });
 
             return comment.getCommentId();
         } catch (BaseException e) {
@@ -260,15 +267,19 @@ public class CommentServiceImpl implements CommentService {
             commentLike.setUserId(userId);
             commentLikeMapper.insert(commentLike);
 
-            MessageDTO messageDTO = new MessageDTO();
-            messageDTO.setReceiverId(comment.getAuthorId());
-            messageDTO.setSenderId(userId);
-            messageDTO.setType(MessageType.LIKE);
-            messageDTO.setTargetId(commentId);
-            messageDTO.setTargetType(MessageTargetType.COMMENT);
-            messageDTO.setIsRead(false);
+            NotificationTask notificationTask = new NotificationTask();
+            notificationTask.setReceiverId(comment.getAuthorId());
+            notificationTask.setSenderId(userId);
+            notificationTask.setType(MessageType.LIKE);
+            notificationTask.setTargetId(commentId);
+            notificationTask.setTargetType(MessageTargetType.COMMENT);
 
-            messageService.createMessage(messageDTO);
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    rabbitTemplate.convertAndSend(RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask);
+                }
+            });
         } catch (Exception e) {
             throw new BaseException("点赞评论失败", e);
         }

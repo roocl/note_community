@@ -23,13 +23,18 @@ import org.notes.model.vo.user.RegisterVO;
 import org.notes.model.vo.user.UserVO;
 import org.notes.repository.UserSearchRepository;
 import org.notes.scope.RequestScopeData;
+import org.notes.config.RabbitMQConfig;
 import org.notes.service.EmailService;
 import org.notes.service.FileService;
+import org.notes.task.email.WelcomeEmailTask;
 import org.notes.service.UserService;
 import org.notes.utils.JwtUtil;
 import org.notes.utils.PaginationUtils;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,6 +70,9 @@ public class UserServiceImpl implements UserService {
     private EmailService emailService;
 
     @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Autowired
     private UserSearchRepository userSearchRepository;
 
     @Override
@@ -96,6 +104,14 @@ public class UserServiceImpl implements UserService {
             @Override
             public void afterCommit() {
                 syncUserToEs(user);
+
+                // 注册成功后发送欢迎邮件
+                if (cn.hutool.core.util.StrUtil.isNotBlank(user.getEmail())) {
+                    WelcomeEmailTask welcomeTask = new WelcomeEmailTask();
+                    welcomeTask.setEmail(user.getEmail());
+                    welcomeTask.setUsername(user.getUsername());
+                    rabbitTemplate.convertAndSend(RabbitMQConfig.WELCOME_EMAIL_QUEUE, welcomeTask);
+                }
             }
         });
 
@@ -171,6 +187,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(value = "users", key = "#userId", unless = "#result == null")
     public UserVO getUserInfo(Long userId) {
         User user = userMapper.findById(userId);
 
@@ -187,6 +204,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @NeedLogin
+    @CacheEvict(value = "users", allEntries = true)
     public LoginUserVO updateUserInfo(UpdateUserRequest request) {
         Long userId = requestScopeData.getUserId();
 

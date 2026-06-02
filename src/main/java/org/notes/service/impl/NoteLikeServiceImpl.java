@@ -2,20 +2,23 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.notes.annotation.NeedLogin;
+import org.notes.config.RabbitMQConfig;
 import org.notes.exception.BaseException;
 import org.notes.exception.NotFoundException;
 import org.notes.mapper.NoteLikeMapper;
 import org.notes.mapper.NoteMapper;
-import org.notes.model.dto.message.MessageDTO;
 import org.notes.model.entity.Note;
 import org.notes.model.entity.NoteLike;
 import org.notes.model.enums.message.MessageTargetType;
 import org.notes.model.enums.message.MessageType;
 import org.notes.scope.RequestScopeData;
-import org.notes.service.MessageService;
 import org.notes.service.NoteLikeService;
+import org.notes.task.notification.NotificationTask;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.HashSet;
 import java.util.List;
@@ -31,7 +34,7 @@ public class NoteLikeServiceImpl implements NoteLikeService {
 
     private final RequestScopeData requestScopeData;
 
-    private final MessageService messageService;
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     public Set<Integer> findUserLikedNoteIds(Long userId, List<Integer> noteIds) {
@@ -58,14 +61,19 @@ public class NoteLikeServiceImpl implements NoteLikeService {
 
             noteMapper.likeNote(noteId);
 
-            MessageDTO messageDTO = new MessageDTO();
-            messageDTO.setReceiverId(note.getAuthorId());
-            messageDTO.setSenderId(userId);
-            messageDTO.setType(MessageType.LIKE);
-            messageDTO.setTargetId(noteId);
-            messageDTO.setTargetType(MessageTargetType.NOTE);
-            messageDTO.setIsRead(false);
-            messageService.createMessage(messageDTO);
+            NotificationTask notificationTask = new NotificationTask();
+            notificationTask.setReceiverId(note.getAuthorId());
+            notificationTask.setSenderId(userId);
+            notificationTask.setType(MessageType.LIKE);
+            notificationTask.setTargetId(noteId);
+            notificationTask.setTargetType(MessageTargetType.NOTE);
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    rabbitTemplate.convertAndSend(RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask);
+                }
+            });
         } catch (Exception e) {
             throw new BaseException("点赞失败", e);
         }

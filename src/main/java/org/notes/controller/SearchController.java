@@ -5,6 +5,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import org.notes.model.base.ApiResponse;
+import org.notes.model.vo.search.NoteSearchResultVO;
 import org.notes.model.vo.search.NoteSearchVO;
 import org.notes.model.vo.search.UserSearchVO;
 import org.notes.service.SearchService;
@@ -27,11 +28,18 @@ public class SearchController {
 
     @ApiOperation("搜索笔记")
     @GetMapping("/notes")
-    public ApiResponse<List<NoteSearchVO>> searchNotes(
+    public ApiResponse<NoteSearchResultVO> searchNotes(
             @ApiParam("搜索关键词") @RequestParam String keyword,
             @ApiParam("页码") @RequestParam(defaultValue = "1") @Min(1) Integer page,
             @ApiParam("每页大小") @RequestParam(defaultValue = "20") @Min(1) Integer pageSize) {
         return ApiResponseUtil.success("搜索成功", searchService.searchNotes(keyword, page, pageSize));
+    }
+
+    @ApiOperation("搜索建议（自动补全）")
+    @GetMapping("/suggest")
+    public ApiResponse<List<String>> suggest(
+            @ApiParam("搜索关键词") @RequestParam String keyword) {
+        return ApiResponseUtil.success("获取搜索建议成功", searchService.suggest(keyword));
     }
 
     @ApiOperation("搜索用户")

@@ -6,6 +6,8 @@ import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.CompletionField;
+import org.springframework.data.elasticsearch.core.suggest.Completion;
 
 import java.time.LocalDateTime;
 
@@ -24,6 +26,15 @@ public class NoteDocument {
 
     @Field(type = FieldType.Integer)
     private Integer questionId;
+
+    @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
+    private String title;
+
+    @Field(type = FieldType.Keyword)
+    private String categoryName;
+
+    @CompletionField
+    private Completion suggest;
 
     @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
     private String content;

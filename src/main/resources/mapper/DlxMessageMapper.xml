@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.notes.mapper.DlxMessageMapper">
+
+    <resultMap id="DlxMessageResultMap" type="org.notes.model.entity.DlxMessage">
+        <id property="id" column="id"/>
+        <result property="originQueue" column="origin_queue"/>
+        <result property="messageBody" column="message_body"/>
+        <result property="errorMessage" column="error_message"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="org.notes.model.entity.DlxMessage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO dead_message (origin_queue, message_body, error_message, created_at)
+        VALUES (#{originQueue}, #{messageBody}, #{errorMessage}, NOW())
+    </insert>
+
+    <select id="findById" resultMap="DlxMessageResultMap">
+        SELECT * FROM dead_message WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultMap="DlxMessageResultMap">
+        SELECT * FROM dead_message ORDER BY created_at DESC LIMIT 100
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM dead_message WHERE id = #{id}
+    </delete>
+</mapper>
