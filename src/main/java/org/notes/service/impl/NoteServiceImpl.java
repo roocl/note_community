@@ -62,8 +62,12 @@ public class NoteServiceImpl implements NoteService {
 
     private final StringRedisTemplate stringRedisTemplate;
 
+    private final EsSyncFailureService esSyncFailureService;
+
+    private final RedisProtectionService redisProtectionService;
+
     @Override
-    @Cacheable(value = "notes", key = "'list:' + T(java.util.Objects).hash(#params.page, #params.pageSize, #params.questionId, #params.authorId, #params.collectionId, #params.sortBy, #params.sortOrder, #params.recentDays)", unless = "#result == null || #result.data == null || #result.data.isEmpty()")
+    @Cacheable(value = "notes", key = "'list:' + T(java.util.Objects).hash(#params.page, #params.pageSize, #params.questionId, #params.authorId, #params.collectionId, #params.sortBy, #params.sortOrder, #params.recentDays)", unless = "#result == null")
     public PageResult<List<NoteVO>> getNotes(NoteQueryParams params) {
         int offset = PaginationUtils.calculateOffset(params.getPage(), params.getPageSize());
         int total = noteMapper.countNotesByQueryParam(params);
@@ -159,7 +163,7 @@ public class NoteServiceImpl implements NoteService {
                     String rankKey = "note:rank:submit:" + LocalDate.now();
                     stringRedisTemplate.opsForZSet().incrementScore(rankKey, String.valueOf(userId), 1);
                     // Set TTL on first write of the day (2 days to cover "yesterday" view)
-                    stringRedisTemplate.expire(rankKey, Duration.ofDays(2));
+                    stringRedisTemplate.expire(rankKey, redisProtectionService.withJitter(Duration.ofDays(2), 300));
                 }
             });
 
@@ -226,6 +230,11 @@ public class NoteServiceImpl implements NoteService {
                 noteSearchRepository.deleteById(noteId);
             } catch (Exception esEx) {
                 log.warn("删除笔记ES索引失败，noteId={}", noteId, esEx);
+                esSyncFailureService.recordFailure(
+                        EsSyncFailureServiceImpl.ENTITY_NOTE,
+                        Long.valueOf(noteId),
+                        EsSyncFailureServiceImpl.OP_DELETE,
+                        esEx);
             }
 
             Long authorId = note.getAuthorId();
@@ -253,7 +262,7 @@ public class NoteServiceImpl implements NoteService {
                 stringRedisTemplate.opsForZSet().reverseRangeWithScores(rankKey, 0, 9);
 
         if (topSet == null || topSet.isEmpty()) {
-            return noteMapper.submitNoteRank();
+            return rebuildSubmitNoteRank(rankKey);
         }
 
         List<Long> userIds = topSet.stream()
@@ -276,6 +285,33 @@ public class NoteServiceImpl implements NoteService {
             result.add(item);
         }
         return result;
+    }
+
+    private List<NoteRankListItem> rebuildSubmitNoteRank(String rankKey) {
+        String lockKey = rankKey + ":rebuild-lock";
+        String token = redisProtectionService.tryLock(lockKey, Duration.ofSeconds(5));
+        List<NoteRankListItem> rankItems = noteMapper.submitNoteRank();
+        if (token == null) {
+            return rankItems;
+        }
+
+        try {
+            if (!rankItems.isEmpty()) {
+                for (NoteRankListItem item : rankItems) {
+                    if (item.getUserId() != null && item.getNoteCount() != null) {
+                        stringRedisTemplate.opsForZSet()
+                                .add(rankKey, String.valueOf(item.getUserId()), item.getNoteCount());
+                    }
+                }
+                stringRedisTemplate.expire(rankKey, redisProtectionService.withJitter(Duration.ofMinutes(30), 300));
+            }
+            return rankItems;
+        } catch (Exception e) {
+            log.warn("Redis排行榜重建失败，key={}", rankKey, e);
+            return rankItems;
+        } finally {
+            redisProtectionService.unlock(lockKey, token);
+        }
     }
 
     @Override
@@ -319,6 +355,13 @@ public class NoteServiceImpl implements NoteService {
             noteSearchRepository.save(doc);
         } catch (Exception e) {
             log.warn("同步笔记到ES失败，noteId={}", note.getNoteId(), e);
+            if (note.getNoteId() != null) {
+                esSyncFailureService.recordFailure(
+                        EsSyncFailureServiceImpl.ENTITY_NOTE,
+                        Long.valueOf(note.getNoteId()),
+                        EsSyncFailureServiceImpl.OP_SAVE,
+                        e);
+            }
         }
     }
 }

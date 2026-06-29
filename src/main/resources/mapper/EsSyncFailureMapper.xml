@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.notes.mapper.EsSyncFailureMapper">
+
+    <resultMap id="EsSyncFailureResultMap" type="org.notes.model.entity.EsSyncFailure">
+        <id property="id" column="id"/>
+        <result property="entityType" column="entity_type"/>
+        <result property="entityId" column="entity_id"/>
+        <result property="operation" column="operation"/>
+        <result property="status" column="status"/>
+        <result property="retryCount" column="retry_count"/>
+        <result property="errorMessage" column="error_message"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="org.notes.model.entity.EsSyncFailure" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO es_sync_failure (entity_type, entity_id, operation, status, retry_count, error_message, created_at, updated_at)
+        VALUES (#{entityType}, #{entityId}, #{operation}, #{status}, #{retryCount}, #{errorMessage}, NOW(), NOW())
+    </insert>
+
+    <select id="findById" resultMap="EsSyncFailureResultMap">
+        SELECT * FROM es_sync_failure WHERE id = #{id}
+    </select>
+
+    <select id="findOpen" resultMap="EsSyncFailureResultMap">
+        SELECT * FROM es_sync_failure
+        WHERE entity_type = #{entityType}
+          AND entity_id = #{entityId}
+          AND operation = #{operation}
+          AND status IN ('PENDING', 'FAILED')
+        ORDER BY updated_at DESC
+        LIMIT 1
+    </select>
+
+    <select id="findAll" resultMap="EsSyncFailureResultMap">
+        SELECT * FROM es_sync_failure ORDER BY updated_at DESC LIMIT 100
+    </select>
+
+    <select id="findPending" resultMap="EsSyncFailureResultMap">
+        SELECT * FROM es_sync_failure
+        WHERE status IN ('PENDING', 'FAILED')
+        ORDER BY updated_at ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="markSuccess">
+        UPDATE es_sync_failure
+        SET status = 'SUCCESS', updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="markFailed">
+        UPDATE es_sync_failure
+        SET status = 'FAILED', error_message = #{errorMessage}, retry_count = #{retryCount}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM es_sync_failure WHERE id = #{id}
+    </delete>
+</mapper>

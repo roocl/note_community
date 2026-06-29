@@ -40,7 +40,7 @@ public class WelcomeEmailTaskConsumer {
 
             helper.setFrom(from);
             helper.setTo(task.getEmail());
-            helper.setSubject("欢迎加入 roocl 笔记社区！");
+            helper.setSubject("欢迎加入笔记社区！");
             helper.setText(emailContent, true);
 
             mailSender.send(message);

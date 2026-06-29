@@ -25,7 +25,9 @@ import org.notes.repository.UserSearchRepository;
 import org.notes.scope.RequestScopeData;
 import org.notes.config.RabbitMQConfig;
 import org.notes.service.EmailService;
+import org.notes.service.EsSyncFailureService;
 import org.notes.service.FileService;
+import org.notes.service.RedisProtectionService;
 import org.notes.task.email.WelcomeEmailTask;
 import org.notes.service.UserService;
 import org.notes.utils.JwtUtil;
@@ -74,6 +76,12 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserSearchRepository userSearchRepository;
+
+    @Autowired
+    private EsSyncFailureService esSyncFailureService;
+
+    @Autowired
+    private RedisProtectionService redisProtectionService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -189,9 +197,14 @@ public class UserServiceImpl implements UserService {
     @Override
     @Cacheable(value = "users", key = "#userId", unless = "#result == null")
     public UserVO getUserInfo(Long userId) {
+        if (redisProtectionService.hasNullMarker("user", userId)) {
+            throw new NotFoundException("用户不存在");
+        }
+
         User user = userMapper.findById(userId);
 
         if (user == null) {
+            redisProtectionService.setNullMarker("user", userId);
             throw new NotFoundException("用户不存在");
         }
 
@@ -277,6 +290,13 @@ public class UserServiceImpl implements UserService {
             userSearchRepository.save(doc);
         } catch (Exception e) {
             log.warn("同步用户到ES失败，userId={}", user != null ? user.getUserId() : null, e);
+            if (user != null && user.getUserId() != null) {
+                esSyncFailureService.recordFailure(
+                        EsSyncFailureServiceImpl.ENTITY_USER,
+                        user.getUserId(),
+                        EsSyncFailureServiceImpl.OP_SAVE,
+                        e);
+            }
         }
     }
 }

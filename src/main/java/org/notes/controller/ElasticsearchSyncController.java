@@ -6,8 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.notes.annotation.NeedAdmin;
 import org.notes.model.base.ApiResponse;
 import org.notes.model.base.EmptyVO;
+import org.notes.service.EsSyncFailureService;
 import org.notes.service.ElasticsearchSyncService;
-import org.notes.task.es.EsReconciliationTask;
 import org.notes.utils.ApiResponseUtil;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,7 +21,7 @@ public class ElasticsearchSyncController {
 
     private final ElasticsearchSyncService elasticsearchSyncService;
 
-    private final EsReconciliationTask esReconciliationTask;
+    private final EsSyncFailureService esSyncFailureService;
 
     @ApiOperation("全量同步所有数据到 Elasticsearch")
     @PostMapping("/sync-all")
@@ -50,8 +50,8 @@ public class ElasticsearchSyncController {
     @ApiOperation("手动触发 ES 数据对账")
     @PostMapping("/reconcile")
     @NeedAdmin
-    public ApiResponse<EmptyVO> reconcile() {
-        esReconciliationTask.reconcile();
-        return ApiResponseUtil.success("对账完成，请查看日志");
+    public ApiResponse<Integer> reconcile() {
+        int mismatchCount = esSyncFailureService.reconcileAll();
+        return ApiResponseUtil.success("对账完成，已写入补偿任务", mismatchCount);
     }
 }
