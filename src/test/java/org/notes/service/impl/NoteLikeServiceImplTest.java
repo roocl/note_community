@@ -9,7 +9,8 @@ import org.notes.exception.NotFoundException;
 import org.notes.mapper.NoteLikeMapper;
 import org.notes.mapper.NoteMapper;
 import org.notes.scope.RequestScopeData;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.notes.service.ReliableRabbitPublisher;
+import org.notes.service.PostCommitExecutor;
 
 import java.util.List;
 import java.util.Set;
@@ -27,7 +28,9 @@ class NoteLikeServiceImplTest {
     @Mock
     private RequestScopeData requestScopeData;
     @Mock
-    private RabbitTemplate rabbitTemplate;
+    private ReliableRabbitPublisher reliableRabbitPublisher;
+    @Mock
+    private PostCommitExecutor postCommitExecutor;
 
     @InjectMocks
     private NoteLikeServiceImpl noteLikeService;

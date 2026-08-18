@@ -22,6 +22,7 @@ import org.notes.service.QuestionService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.elasticsearch.core.suggest.Completion;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -46,6 +47,7 @@ public class EsSyncFailureServiceImpl implements EsSyncFailureService {
     private final CategoryService categoryService;
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void recordFailure(String entityType, Long entityId, String operation, Exception exception) {
         if (entityId == null) {
             return;

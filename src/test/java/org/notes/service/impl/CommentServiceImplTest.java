@@ -18,7 +18,8 @@ import org.notes.model.dto.comment.UpdateCommentRequest;
 import org.notes.model.entity.Comment;
 import org.notes.model.vo.comment.CommentVO;
 import org.notes.scope.RequestScopeData;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.notes.service.ReliableRabbitPublisher;
+import org.notes.service.PostCommitExecutor;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +40,9 @@ class CommentServiceImplTest {
     @Mock
     private CommentLikeMapper commentLikeMapper;
     @Mock
-    private RabbitTemplate rabbitTemplate;
+    private ReliableRabbitPublisher reliableRabbitPublisher;
+    @Mock
+    private PostCommitExecutor postCommitExecutor;
     @Mock
     private RequestScopeData requestScopeData;
     @Mock

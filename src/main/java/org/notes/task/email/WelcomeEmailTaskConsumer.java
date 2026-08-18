@@ -3,7 +3,10 @@ package org.notes.task.email;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.notes.config.RabbitMQConfig;
+import org.notes.service.ReliableRabbitPublisher;
+import org.slf4j.MDC;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -26,7 +29,12 @@ public class WelcomeEmailTaskConsumer {
     private String from;
 
     @RabbitListener(queues = RabbitMQConfig.WELCOME_EMAIL_QUEUE)
-    public void processWelcomeEmail(WelcomeEmailTask task) {
+    public void processWelcomeEmail(WelcomeEmailTask task,
+                                    @Header(value = ReliableRabbitPublisher.TRACE_ID_HEADER, required = false)
+                                    String traceId) {
+        if (traceId != null && !traceId.isBlank()) {
+            MDC.put(ReliableRabbitPublisher.TRACE_ID_HEADER, traceId);
+        }
         log.info("收到欢迎邮件任务：{}", task.getEmail());
 
         try {
@@ -48,6 +56,8 @@ public class WelcomeEmailTaskConsumer {
         } catch (Exception e) {
             log.error("欢迎邮件发送失败：{}", task.getEmail(), e);
             throw new RuntimeException("欢迎邮件发送失败，触发重试", e);
+        } finally {
+            MDC.remove(ReliableRabbitPublisher.TRACE_ID_HEADER);
         }
     }
 }

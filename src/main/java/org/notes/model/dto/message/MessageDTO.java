@@ -7,6 +7,9 @@ import lombok.Data;
 @ApiModel("消息DTO")
 @Data
 public class MessageDTO {
+    @ApiModelProperty("消息幂等事件ID")
+    private String eventId;
+
     @ApiModelProperty("消息ID")
     private Integer messageId;
 

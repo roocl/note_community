@@ -6,9 +6,9 @@ import org.notes.exception.BadRequestException;
 import org.notes.exception.BaseException;
 import org.notes.model.enums.redisKey.RedisKey;
 import org.notes.service.EmailService;
+import org.notes.service.ReliableRabbitPublisher;
 import org.notes.task.email.EmailTask;
 import org.notes.utils.RandomCodeUtil;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class EmailServiceImpl implements EmailService {
 
     @Autowired
-    private RabbitTemplate rabbitTemplate;
+    private ReliableRabbitPublisher reliableRabbitPublisher;
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
@@ -57,7 +57,9 @@ public class EmailServiceImpl implements EmailService {
             emailTask.setCode(verificationCode);
             emailTask.setTimestamp(System.currentTimeMillis());
 
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EMAIL_QUEUE, emailTask);
+            if (!reliableRabbitPublisher.sendOrRecord(RabbitMQConfig.EMAIL_QUEUE, emailTask)) {
+                throw new IllegalStateException("验证码消息未被 RabbitMQ 确认");
+            }
 
             String codeKey = RedisKey.registerVerificationCode(email);
             try {

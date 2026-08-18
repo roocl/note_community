@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 @ApiModel("消息")
 @Data
 public class Message {
+    @ApiModelProperty("消息幂等事件ID")
+    private String eventId;
+
     @ApiModelProperty("消息ID")
     private Integer messageId;
 

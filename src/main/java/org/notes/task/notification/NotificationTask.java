@@ -7,6 +7,8 @@ import java.io.Serializable;
 @Data
 public class NotificationTask implements Serializable {
 
+    private String eventId;
+
     private Long receiverId;
 
     private Long senderId;

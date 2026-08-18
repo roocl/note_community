@@ -19,11 +19,20 @@ public class RabbitMQConfig {
     public static final String DLX_EMAIL_QUEUE = "email.queue.dlx";
     public static final String DLX_NOTIFICATION_QUEUE = "notification.queue.dlx";
     public static final String DLX_WELCOME_EMAIL_QUEUE = "welcome.email.queue.dlx";
+    public static final String PARKING_EXCHANGE = "parking.exchange";
+    public static final String PARKING_EMAIL_QUEUE = "email.queue.parking";
+    public static final String PARKING_NOTIFICATION_QUEUE = "notification.queue.parking";
+    public static final String PARKING_WELCOME_EMAIL_QUEUE = "welcome.email.queue.parking";
 
     // 死信交换机
     @Bean
     public DirectExchange dlxExchange() {
         return new DirectExchange(DLX_EXCHANGE);
+    }
+
+    @Bean
+    public DirectExchange parkingExchange() {
+        return new DirectExchange(PARKING_EXCHANGE);
     }
 
     // 业务队列（含 DLX）
@@ -54,17 +63,26 @@ public class RabbitMQConfig {
     // 死信队列
     @Bean
     public Queue dlxEmailQueue() {
-        return new Queue(DLX_EMAIL_QUEUE, true);
+        return QueueBuilder.durable(DLX_EMAIL_QUEUE)
+                .withArgument("x-dead-letter-exchange", PARKING_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", "parking.email")
+                .build();
     }
 
     @Bean
     public Queue dlxNotificationQueue() {
-        return new Queue(DLX_NOTIFICATION_QUEUE, true);
+        return QueueBuilder.durable(DLX_NOTIFICATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", PARKING_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", "parking.notification")
+                .build();
     }
 
     @Bean
     public Queue dlxWelcomeEmailQueue() {
-        return new Queue(DLX_WELCOME_EMAIL_QUEUE, true);
+        return QueueBuilder.durable(DLX_WELCOME_EMAIL_QUEUE)
+                .withArgument("x-dead-letter-exchange", PARKING_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", "parking.welcome")
+                .build();
     }
 
     // 死信队列绑定
@@ -81,6 +99,36 @@ public class RabbitMQConfig {
     @Bean
     public Binding dlxWelcomeEmailBinding() {
         return BindingBuilder.bind(dlxWelcomeEmailQueue()).to(dlxExchange()).with("dlx.welcome");
+    }
+
+    @Bean
+    public Queue parkingEmailQueue() {
+        return QueueBuilder.durable(PARKING_EMAIL_QUEUE).build();
+    }
+
+    @Bean
+    public Queue parkingNotificationQueue() {
+        return QueueBuilder.durable(PARKING_NOTIFICATION_QUEUE).build();
+    }
+
+    @Bean
+    public Queue parkingWelcomeEmailQueue() {
+        return QueueBuilder.durable(PARKING_WELCOME_EMAIL_QUEUE).build();
+    }
+
+    @Bean
+    public Binding parkingEmailBinding() {
+        return BindingBuilder.bind(parkingEmailQueue()).to(parkingExchange()).with("parking.email");
+    }
+
+    @Bean
+    public Binding parkingNotificationBinding() {
+        return BindingBuilder.bind(parkingNotificationQueue()).to(parkingExchange()).with("parking.notification");
+    }
+
+    @Bean
+    public Binding parkingWelcomeEmailBinding() {
+        return BindingBuilder.bind(parkingWelcomeEmailQueue()).to(parkingExchange()).with("parking.welcome");
     }
 
     @Bean

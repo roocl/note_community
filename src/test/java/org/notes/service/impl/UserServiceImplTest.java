@@ -26,7 +26,8 @@ import org.notes.service.EsSyncFailureService;
 import org.notes.service.FileService;
 import org.notes.service.RedisProtectionService;
 import org.notes.utils.JwtUtil;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.notes.service.ReliableRabbitPublisher;
+import org.notes.service.PostCommitExecutor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -52,7 +53,9 @@ class UserServiceImplTest {
     @Mock
     private EmailService emailService;
     @Mock
-    private RabbitTemplate rabbitTemplate;
+    private ReliableRabbitPublisher reliableRabbitPublisher;
+    @Mock
+    private PostCommitExecutor postCommitExecutor;
     @Mock
     private UserSearchRepository userSearchRepository;
     @Mock

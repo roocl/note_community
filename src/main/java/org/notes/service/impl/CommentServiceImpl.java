@@ -27,9 +27,10 @@ import org.notes.model.vo.comment.CommentVO;
 import org.notes.model.vo.user.UserActionVO;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.CommentService;
+import org.notes.service.ReliableRabbitPublisher;
+import org.notes.service.PostCommitExecutor;
 import org.notes.task.notification.NotificationTask;
 import org.notes.utils.PaginationUtils;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -43,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -54,7 +56,8 @@ public class CommentServiceImpl implements CommentService {
     private final NoteMapper noteMapper;
     private final UserMapper userMapper;
     private final CommentLikeMapper commentLikeMapper;
-    private final RabbitTemplate rabbitTemplate;
+    private final ReliableRabbitPublisher reliableRabbitPublisher;
+    private final PostCommitExecutor postCommitExecutor;
     private final RequestScopeData requestScopeData;
     private final MessageMapper messageMapper;
 
@@ -87,6 +90,7 @@ public class CommentServiceImpl implements CommentService {
             }
 
             NotificationTask notificationTask = new NotificationTask();
+            notificationTask.setEventId(UUID.randomUUID().toString());
             notificationTask.setReceiverId(note.getAuthorId());
             notificationTask.setSenderId(userId);
             notificationTask.setType(MessageType.COMMENT);
@@ -97,7 +101,8 @@ public class CommentServiceImpl implements CommentService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    rabbitTemplate.convertAndSend(RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask);
+                    postCommitExecutor.execute(() -> reliableRabbitPublisher.sendOrRecord(
+                            RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask));
                 }
             });
 
@@ -268,6 +273,7 @@ public class CommentServiceImpl implements CommentService {
             commentLikeMapper.insert(commentLike);
 
             NotificationTask notificationTask = new NotificationTask();
+            notificationTask.setEventId(UUID.randomUUID().toString());
             notificationTask.setReceiverId(comment.getAuthorId());
             notificationTask.setSenderId(userId);
             notificationTask.setType(MessageType.LIKE);
@@ -277,7 +283,8 @@ public class CommentServiceImpl implements CommentService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    rabbitTemplate.convertAndSend(RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask);
+                    postCommitExecutor.execute(() -> reliableRabbitPublisher.sendOrRecord(
+                            RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask));
                 }
             });
         } catch (Exception e) {

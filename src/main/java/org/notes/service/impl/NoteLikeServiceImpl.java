@@ -13,8 +13,9 @@ import org.notes.model.enums.message.MessageTargetType;
 import org.notes.model.enums.message.MessageType;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.NoteLikeService;
+import org.notes.service.ReliableRabbitPublisher;
+import org.notes.service.PostCommitExecutor;
 import org.notes.task.notification.NotificationTask;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -23,6 +24,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +36,8 @@ public class NoteLikeServiceImpl implements NoteLikeService {
 
     private final RequestScopeData requestScopeData;
 
-    private final RabbitTemplate rabbitTemplate;
+    private final ReliableRabbitPublisher reliableRabbitPublisher;
+    private final PostCommitExecutor postCommitExecutor;
 
     @Override
     public Set<Integer> findUserLikedNoteIds(Long userId, List<Integer> noteIds) {
@@ -62,6 +65,7 @@ public class NoteLikeServiceImpl implements NoteLikeService {
             noteMapper.likeNote(noteId);
 
             NotificationTask notificationTask = new NotificationTask();
+            notificationTask.setEventId(UUID.randomUUID().toString());
             notificationTask.setReceiverId(note.getAuthorId());
             notificationTask.setSenderId(userId);
             notificationTask.setType(MessageType.LIKE);
@@ -71,7 +75,8 @@ public class NoteLikeServiceImpl implements NoteLikeService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    rabbitTemplate.convertAndSend(RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask);
+                    postCommitExecutor.execute(() -> reliableRabbitPublisher.sendOrRecord(
+                            RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask));
                 }
             });
         } catch (Exception e) {

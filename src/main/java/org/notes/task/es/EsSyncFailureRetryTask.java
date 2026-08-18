@@ -19,7 +19,7 @@ public class EsSyncFailureRetryTask {
         esSyncFailureService.retryPendingFailures(50);
     }
 
-    @Scheduled(cron = "0 0 4 * * ?")
+    @Scheduled(cron = "0 30 2 * * ?")
     public void reconcileEsDocuments() {
         int mismatchCount = esSyncFailureService.reconcileAll();
         log.info("[ES同步对账] 检测到{}条不一致的文档", mismatchCount);

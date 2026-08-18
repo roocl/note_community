@@ -8,7 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.notes.model.enums.redisKey.RedisKey;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.notes.service.ReliableRabbitPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -24,7 +24,7 @@ import static org.mockito.Mockito.*;
 class EmailServiceImplTest {
 
     @Mock
-    private RabbitTemplate rabbitTemplate;
+    private ReliableRabbitPublisher reliableRabbitPublisher;
     @Mock
     private RedisTemplate<String, String> redisTemplate;
     @Mock
@@ -53,11 +53,12 @@ class EmailServiceImplTest {
                 eq(60L),
                 eq(TimeUnit.SECONDS)
         )).thenReturn(true);
+        when(reliableRabbitPublisher.sendOrRecord(anyString(), any(Object.class))).thenReturn(true);
 
         emailService.sendVerificationCode(email);
 
         // 验证发送到 RabbitMQ
-        verify(rabbitTemplate).convertAndSend(anyString(), any(Object.class));
+        verify(reliableRabbitPublisher).sendOrRecord(anyString(), any(Object.class));
         // 验证验证码写入 Redis
         verify(valueOperations).set(eq(RedisKey.registerVerificationCode(email)), anyString(), eq(15L), any());
         // 验证频率限制标记写入 Redis
@@ -83,7 +84,7 @@ class EmailServiceImplTest {
         )).thenReturn(false);
 
         assertThrows(RuntimeException.class, () -> emailService.sendVerificationCode(email));
-        verify(rabbitTemplate, never()).convertAndSend(anyString(), any(Object.class));
+        verify(reliableRabbitPublisher, never()).sendOrRecord(anyString(), any(Object.class));
     }
 
     // ==================== checkVerificationCode ====================

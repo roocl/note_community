@@ -9,5 +9,9 @@ public class DlxMessage {
     private String originQueue;
     private String messageBody;
     private String errorMessage;
+    private String traceId;
+    private String status;
+    private Integer retryCount;
+    private LocalDateTime lastRetryAt;
     private LocalDateTime createdAt;
 }

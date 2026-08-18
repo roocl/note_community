@@ -28,11 +28,12 @@ import org.notes.service.EmailService;
 import org.notes.service.EsSyncFailureService;
 import org.notes.service.FileService;
 import org.notes.service.RedisProtectionService;
+import org.notes.service.ReliableRabbitPublisher;
+import org.notes.service.PostCommitExecutor;
 import org.notes.task.email.WelcomeEmailTask;
 import org.notes.service.UserService;
 import org.notes.utils.JwtUtil;
 import org.notes.utils.PaginationUtils;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -72,7 +73,7 @@ public class UserServiceImpl implements UserService {
     private EmailService emailService;
 
     @Autowired
-    private RabbitTemplate rabbitTemplate;
+    private ReliableRabbitPublisher reliableRabbitPublisher;
 
     @Autowired
     private UserSearchRepository userSearchRepository;
@@ -82,6 +83,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private RedisProtectionService redisProtectionService;
+
+    @Autowired
+    private PostCommitExecutor postCommitExecutor;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -108,18 +112,15 @@ public class UserServiceImpl implements UserService {
         BeanUtils.copyProperties(request, user);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                syncUserToEs(user);
+        registerAfterCommit(() -> {
+            syncUserToEs(user);
 
-                // 注册成功后发送欢迎邮件
-                if (cn.hutool.core.util.StrUtil.isNotBlank(user.getEmail())) {
-                    WelcomeEmailTask welcomeTask = new WelcomeEmailTask();
-                    welcomeTask.setEmail(user.getEmail());
-                    welcomeTask.setUsername(user.getUsername());
-                    rabbitTemplate.convertAndSend(RabbitMQConfig.WELCOME_EMAIL_QUEUE, welcomeTask);
-                }
+            // 注册成功后发送欢迎邮件
+            if (cn.hutool.core.util.StrUtil.isNotBlank(user.getEmail())) {
+                WelcomeEmailTask welcomeTask = new WelcomeEmailTask();
+                welcomeTask.setEmail(user.getEmail());
+                welcomeTask.setUsername(user.getUsername());
+                reliableRabbitPublisher.sendOrRecord(RabbitMQConfig.WELCOME_EMAIL_QUEUE, welcomeTask);
             }
         });
 
@@ -233,7 +234,7 @@ public class UserServiceImpl implements UserService {
             userMapper.update(user);
 
             User fullUser = userMapper.findById(userId);
-            syncUserToEs(fullUser);
+            registerAfterCommit(() -> syncUserToEs(fullUser));
 
             LoginUserVO loginUserVO = new LoginUserVO();
             BeanUtils.copyProperties(fullUser, loginUserVO);
@@ -291,12 +292,29 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             log.warn("同步用户到ES失败，userId={}", user != null ? user.getUserId() : null, e);
             if (user != null && user.getUserId() != null) {
-                esSyncFailureService.recordFailure(
-                        EsSyncFailureServiceImpl.ENTITY_USER,
-                        user.getUserId(),
-                        EsSyncFailureServiceImpl.OP_SAVE,
-                        e);
+                try {
+                    esSyncFailureService.recordFailure(
+                            EsSyncFailureServiceImpl.ENTITY_USER,
+                            user.getUserId(),
+                            EsSyncFailureServiceImpl.OP_SAVE,
+                            e);
+                } catch (Exception compensationFailure) {
+                    log.error("记录用户ES同步补偿失败，userId={}", user.getUserId(), compensationFailure);
+                }
             }
         }
+    }
+
+    private void registerAfterCommit(Runnable action) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            action.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                postCommitExecutor.execute(action);
+            }
+        });
     }
 }

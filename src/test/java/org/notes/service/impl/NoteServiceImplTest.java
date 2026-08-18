@@ -23,6 +23,7 @@ import org.notes.service.CategoryService;
 import org.notes.service.CollectionNoteService;
 import org.notes.service.EsSyncFailureService;
 import org.notes.service.NoteLikeService;
+import org.notes.service.PostCommitExecutor;
 import org.notes.service.QuestionService;
 import org.notes.service.RedisProtectionService;
 import org.notes.service.UserService;
@@ -64,6 +65,8 @@ class NoteServiceImplTest {
     private StringRedisTemplate stringRedisTemplate;
     @Mock
     private ZSetOperations<String, String> zSetOperations;
+    @Mock
+    private PostCommitExecutor postCommitExecutor;
 
     @InjectMocks
     private NoteServiceImpl noteService;
@@ -162,5 +165,16 @@ class NoteServiceImplTest {
         assertEquals(1, noteService.submitNoteRank().size());
         verify(zSetOperations, never()).add(anyString(), anyString(), anyDouble());
         verify(redisProtectionService, never()).unlock(anyString(), anyString());
+    }
+
+    @Test
+    void submitNoteRank_fallsBackToMysqlWhenRedisThrows() {
+        when(stringRedisTemplate.opsForZSet()).thenThrow(new RuntimeException("redis down"));
+        NoteRankListItem item = new NoteRankListItem();
+        item.setUserId(1L);
+        when(noteMapper.submitNoteRank()).thenReturn(List.of(item));
+
+        assertEquals(1, noteService.submitNoteRank().size());
+        verify(noteMapper).submitNoteRank();
     }
 }

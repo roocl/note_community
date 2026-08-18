@@ -9,8 +9,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.notes.exception.NotFoundException;
 import org.notes.mapper.DlxMessageMapper;
 import org.notes.model.entity.DlxMessage;
+import org.notes.service.ReliableRabbitPublisher;
 import org.springframework.amqp.core.Message;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import java.util.List;
 
@@ -24,7 +24,7 @@ class DlxMessageServiceImplTest {
     @Mock
     private DlxMessageMapper dlxMessageMapper;
     @Mock
-    private RabbitTemplate rabbitTemplate;
+    private ReliableRabbitPublisher reliableRabbitPublisher;
 
     @InjectMocks
     private DlxMessageServiceImpl dlxMessageService;
@@ -47,13 +47,14 @@ class DlxMessageServiceImplTest {
     }
 
     @Test
-    void retryMessage_republishesRawMessageAndDeletesDeadRecord() {
+    void retryMessage_republishesRawMessageAndMarksDeadRecordRetried() {
         when(dlxMessageMapper.findById(1L)).thenReturn(dlxMessage);
 
         dlxMessageService.retryMessage(1L);
 
-        verify(rabbitTemplate).send(eq("email.queue"), any(Message.class));
-        verify(dlxMessageMapper).deleteById(1L);
+        verify(reliableRabbitPublisher).sendRaw(eq("email.queue"), any(Message.class), isNull());
+        verify(dlxMessageMapper).markRetried(1L);
+        verify(dlxMessageMapper, never()).deleteById(1L);
     }
 
     @Test
@@ -61,6 +62,19 @@ class DlxMessageServiceImplTest {
         when(dlxMessageMapper.findById(9L)).thenReturn(null);
 
         assertThrows(NotFoundException.class, () -> dlxMessageService.retryMessage(9L));
+    }
+
+    @Test
+    void retryMessage_keepsRecordAndMarksFailureWhenPublishIsNotConfirmed() {
+        when(dlxMessageMapper.findById(1L)).thenReturn(dlxMessage);
+        doThrow(new IllegalStateException("nack"))
+                .when(reliableRabbitPublisher).sendRaw(eq("email.queue"), any(Message.class), isNull());
+
+        assertThrows(IllegalStateException.class, () -> dlxMessageService.retryMessage(1L));
+
+        verify(dlxMessageMapper).markRetryFailed(eq(1L), contains("nack"));
+        verify(dlxMessageMapper, never()).markRetried(anyLong());
+        verify(dlxMessageMapper, never()).deleteById(anyLong());
     }
 
     @Test

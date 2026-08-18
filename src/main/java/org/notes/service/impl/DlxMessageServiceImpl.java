@@ -5,10 +5,10 @@ import org.notes.exception.NotFoundException;
 import org.notes.mapper.DlxMessageMapper;
 import org.notes.model.entity.DlxMessage;
 import org.notes.service.DlxMessageService;
+import org.notes.service.ReliableRabbitPublisher;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.MessageProperties;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +21,7 @@ public class DlxMessageServiceImpl implements DlxMessageService {
 
     private final DlxMessageMapper dlxMessageMapper;
 
-    private final RabbitTemplate rabbitTemplate;
+    private final ReliableRabbitPublisher reliableRabbitPublisher;
 
     @Override
     public List<DlxMessage> listMessages() {
@@ -38,7 +38,6 @@ public class DlxMessageServiceImpl implements DlxMessageService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void retryMessage(Long id) {
         DlxMessage dlxMessage = getMessage(id);
         Message message = MessageBuilder
@@ -46,8 +45,13 @@ public class DlxMessageServiceImpl implements DlxMessageService {
                 .setContentType(MessageProperties.CONTENT_TYPE_JSON)
                 .build();
 
-        rabbitTemplate.send(dlxMessage.getOriginQueue(), message);
-        dlxMessageMapper.deleteById(id);
+        try {
+            reliableRabbitPublisher.sendRaw(dlxMessage.getOriginQueue(), message, dlxMessage.getTraceId());
+            dlxMessageMapper.markRetried(id);
+        } catch (Exception e) {
+            dlxMessageMapper.markRetryFailed(id, "Retry publish failed: " + e.getMessage());
+            throw e;
+        }
     }
 
     @Override

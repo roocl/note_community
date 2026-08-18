@@ -65,6 +65,7 @@ public class NoteServiceImpl implements NoteService {
     private final EsSyncFailureService esSyncFailureService;
 
     private final RedisProtectionService redisProtectionService;
+    private final PostCommitExecutor postCommitExecutor;
 
     @Override
     @Cacheable(value = "notes", key = "'list:' + T(java.util.Objects).hash(#params.page, #params.pageSize, #params.questionId, #params.authorId, #params.collectionId, #params.sortBy, #params.sortOrder, #params.recentDays)", unless = "#result == null")
@@ -157,18 +158,17 @@ public class NoteServiceImpl implements NoteService {
             noteMapper.insert(note);
 
             // 维护今日提交排行榜（事务提交后执行）
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
+            registerAfterCommit(() -> {
+                try {
                     String rankKey = "note:rank:submit:" + LocalDate.now();
                     stringRedisTemplate.opsForZSet().incrementScore(rankKey, String.valueOf(userId), 1);
-                    // Set TTL on first write of the day (2 days to cover "yesterday" view)
                     stringRedisTemplate.expire(rankKey, redisProtectionService.withJitter(Duration.ofDays(2), 300));
+                } catch (Exception redisEx) {
+                    log.warn("Redis排行榜更新失败，userId={}", userId, redisEx);
                 }
             });
 
-            // 同步到 Elasticsearch
-            syncNoteToEs(note);
+            registerAfterCommit(() -> syncNoteToEs(note));
 
             CreateNoteVO createNoteVO = new CreateNoteVO();
             return createNoteVO;
@@ -200,8 +200,7 @@ public class NoteServiceImpl implements NoteService {
 
             noteMapper.update(note);
 
-            // 同步到 Elasticsearch
-            syncNoteToEs(note);
+            registerAfterCommit(() -> syncNoteToEs(note));
         } catch (Exception e) {
             throw new BaseException("更新笔记失败", e);
         }
@@ -225,26 +224,17 @@ public class NoteServiceImpl implements NoteService {
         try {
             noteMapper.deleteById(noteId);
 
-            // 从 Elasticsearch 删除
-            try {
-                noteSearchRepository.deleteById(noteId);
-            } catch (Exception esEx) {
-                log.warn("删除笔记ES索引失败，noteId={}", noteId, esEx);
-                esSyncFailureService.recordFailure(
-                        EsSyncFailureServiceImpl.ENTITY_NOTE,
-                        Long.valueOf(noteId),
-                        EsSyncFailureServiceImpl.OP_DELETE,
-                        esEx);
-            }
+            registerAfterCommit(() -> deleteNoteFromEs(noteId));
 
             Long authorId = note.getAuthorId();
             // 维护今日提交排行榜（事务提交后扣减）
             try {
-                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
+                registerAfterCommit(() -> {
+                    try {
                         String rankKey = "note:rank:submit:" + LocalDate.now();
                         stringRedisTemplate.opsForZSet().incrementScore(rankKey, String.valueOf(authorId), -1);
+                    } catch (Exception redisEx) {
+                        log.warn("Redis排行榜扣减失败，noteId={}", noteId, redisEx);
                     }
                 });
             } catch (Exception redisEx) {
@@ -258,8 +248,13 @@ public class NoteServiceImpl implements NoteService {
     @Override
     public List<NoteRankListItem> submitNoteRank() {
         String rankKey = "note:rank:submit:" + LocalDate.now();
-        Set<ZSetOperations.TypedTuple<String>> topSet =
-                stringRedisTemplate.opsForZSet().reverseRangeWithScores(rankKey, 0, 9);
+        Set<ZSetOperations.TypedTuple<String>> topSet;
+        try {
+            topSet = stringRedisTemplate.opsForZSet().reverseRangeWithScores(rankKey, 0, 9);
+        } catch (Exception redisEx) {
+            log.warn("Redis排行榜读取失败，降级查询MySQL，key={}", rankKey, redisEx);
+            return noteMapper.submitNoteRank();
+        }
 
         if (topSet == null || topSet.isEmpty()) {
             return rebuildSubmitNoteRank(rankKey);
@@ -356,12 +351,39 @@ public class NoteServiceImpl implements NoteService {
         } catch (Exception e) {
             log.warn("同步笔记到ES失败，noteId={}", note.getNoteId(), e);
             if (note.getNoteId() != null) {
-                esSyncFailureService.recordFailure(
-                        EsSyncFailureServiceImpl.ENTITY_NOTE,
-                        Long.valueOf(note.getNoteId()),
-                        EsSyncFailureServiceImpl.OP_SAVE,
-                        e);
+                recordEsFailureSafely(EsSyncFailureServiceImpl.OP_SAVE, Long.valueOf(note.getNoteId()), e);
             }
         }
+    }
+
+    private void deleteNoteFromEs(Integer noteId) {
+        try {
+            noteSearchRepository.deleteById(noteId);
+        } catch (Exception e) {
+            log.warn("删除笔记ES索引失败，noteId={}", noteId, e);
+            recordEsFailureSafely(EsSyncFailureServiceImpl.OP_DELETE, Long.valueOf(noteId), e);
+        }
+    }
+
+    private void recordEsFailureSafely(String operation, Long noteId, Exception failure) {
+        try {
+            esSyncFailureService.recordFailure(
+                    EsSyncFailureServiceImpl.ENTITY_NOTE, noteId, operation, failure);
+        } catch (Exception compensationFailure) {
+            log.error("记录ES同步补偿失败，noteId={}, operation={}", noteId, operation, compensationFailure);
+        }
+    }
+
+    private void registerAfterCommit(Runnable action) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            action.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                postCommitExecutor.execute(action);
+            }
+        });
     }
 }

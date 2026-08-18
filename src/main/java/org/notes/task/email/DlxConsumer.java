@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.notes.config.RabbitMQConfig;
 import org.notes.mapper.DlxMessageMapper;
 import org.notes.model.entity.DlxMessage;
+import org.notes.service.ReliableRabbitPublisher;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +36,8 @@ public class DlxConsumer {
             dlxMessage.setOriginQueue(deadLetterInfo.originQueue());
             dlxMessage.setMessageBody(body);
             dlxMessage.setErrorMessage(deadLetterInfo.errorMessage());
+            dlxMessage.setTraceId((String) failedMessage.getMessageProperties().getHeaders()
+                    .get(ReliableRabbitPublisher.TRACE_ID_HEADER));
             dlxMessageMapper.insert(dlxMessage);
             log.info("死信消息已持久化，id={}", dlxMessage.getId());
         } catch (Exception e) {

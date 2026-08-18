@@ -4,8 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.notes.config.RabbitMQConfig;
+import org.notes.service.ReliableRabbitPublisher;
+import org.slf4j.MDC;
 import org.notes.model.enums.redisKey.RedisKey;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -35,7 +38,12 @@ public class EmailTaskConsumer {
 
     // 监听rabbitmq队列
     @RabbitListener(queues = RabbitMQConfig.EMAIL_QUEUE)
-    public void processEmail(EmailTask emailTask) {
+    public void processEmail(EmailTask emailTask,
+                             @Header(value = ReliableRabbitPublisher.TRACE_ID_HEADER, required = false)
+                             String traceId) {
+        if (traceId != null && !traceId.isBlank()) {
+            MDC.put(ReliableRabbitPublisher.TRACE_ID_HEADER, traceId);
+        }
         log.info("rabbitmq收到发信任务：{}", emailTask.getEmail());
 
         try {
@@ -64,6 +72,8 @@ public class EmailTaskConsumer {
         } catch (Exception e) {
             log.error("验证码发送失败", e);
             throw new RuntimeException("邮件发送失败，触发重试", e);
+        } finally {
+            MDC.remove(ReliableRabbitPublisher.TRACE_ID_HEADER);
         }
     }
 }
