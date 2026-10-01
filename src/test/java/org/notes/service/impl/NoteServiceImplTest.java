@@ -1,9 +1,10 @@
 package org.notes.service.impl;
 
 import org.junit.jupiter.api.BeforeEach;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.redis.core.ValueOperations;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.notes.exception.ForbiddenException;
@@ -23,6 +24,7 @@ import org.notes.service.CategoryService;
 import org.notes.service.CollectionNoteService;
 import org.notes.service.EsSyncFailureService;
 import org.notes.service.NoteLikeService;
+import org.notes.service.NoteListCache;
 import org.notes.service.PostCommitExecutor;
 import org.notes.service.QuestionService;
 import org.notes.service.RedisProtectionService;
@@ -43,6 +45,8 @@ class NoteServiceImplTest {
 
     @Mock
     private NoteMapper noteMapper;
+    @Mock
+    private ValueOperations<String, String> cacheValues;
     @Mock
     private UserService userService;
     @Mock
@@ -68,13 +72,18 @@ class NoteServiceImplTest {
     @Mock
     private PostCommitExecutor postCommitExecutor;
 
-    @InjectMocks
     private NoteServiceImpl noteService;
 
     private Note note;
 
     @BeforeEach
     void setUp() {
+        lenient().when(stringRedisTemplate.opsForValue()).thenReturn(cacheValues);
+        noteService = new NoteServiceImpl(noteMapper,
+                new NoteListCache(noteMapper, stringRedisTemplate, new ObjectMapper().findAndRegisterModules()),
+                userService, questionService, noteLikeService, collectionNoteService, requestScopeData,
+                categoryService, noteSearchRepository, stringRedisTemplate, esSyncFailureService,
+                redisProtectionService, postCommitExecutor);
         note = new Note();
         note.setNoteId(1);
         note.setAuthorId(1L);
@@ -87,6 +96,7 @@ class NoteServiceImplTest {
         NoteQueryParams params = new NoteQueryParams();
         params.setPage(1);
         params.setPageSize(10);
+        when(cacheValues.setIfAbsent(anyString(), anyString())).thenReturn(true);
         when(noteMapper.countNotesByQueryParam(params)).thenReturn(1);
         when(noteMapper.findByQueryParams(params, 0, 10)).thenReturn(List.of(note));
         User user = new User();
@@ -107,14 +117,14 @@ class NoteServiceImplTest {
 
     @Test
     void updateNote_throwsWhenMissing() {
-        when(noteMapper.findById(9)).thenReturn(null);
+        when(noteMapper.findByIdForUpdate(9)).thenReturn(null);
 
         assertThrows(NotFoundException.class, () -> noteService.updateNote(9, new UpdateNoteRequest()));
     }
 
     @Test
     void updateNote_throwsWhenCurrentUserIsNotAuthor() {
-        when(noteMapper.findById(1)).thenReturn(note);
+        when(noteMapper.findByIdForUpdate(1)).thenReturn(note);
         when(requestScopeData.getUserId()).thenReturn(2L);
 
         assertThrows(ForbiddenException.class, () -> noteService.updateNote(1, new UpdateNoteRequest()));
@@ -124,7 +134,7 @@ class NoteServiceImplTest {
     void updateNote_recordsEsSyncFailureWhenSaveFails() {
         UpdateNoteRequest request = new UpdateNoteRequest();
         request.setContent("new content");
-        when(noteMapper.findById(1)).thenReturn(note);
+        when(noteMapper.findByIdForUpdate(1)).thenReturn(note);
         when(requestScopeData.getUserId()).thenReturn(1L);
         doThrow(new RuntimeException("es down")).when(noteSearchRepository).save(any());
 

@@ -15,6 +15,8 @@ public interface CollectionNoteService {
 
     void deleteCollectionNote(Integer collectionId, UpdateCollectionNoteBody requestBody);
 
+    void deleteCollection(Integer collectionId);
+
     void batchModifyCollection(UpdateCollectionNoteBatchBody requestBody);
 
     Set<Integer> findUserCollectedNoteIds(Long userId, List<Integer> noteIds);

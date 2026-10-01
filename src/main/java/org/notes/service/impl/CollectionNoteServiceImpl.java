@@ -11,12 +11,15 @@ import org.notes.mapper.CollectionNoteMapper;
 import org.notes.mapper.NoteMapper;
 import org.notes.model.dto.collectionNote.UpdateCollectionNoteBatchBody;
 import org.notes.model.dto.collectionNote.UpdateCollectionNoteBody;
+import org.notes.model.dto.collectionNote.UpdateCollectionNoteBatchBody.Action;
 import org.notes.model.entity.Collection;
 import org.notes.model.entity.CollectionNote;
 import org.notes.model.entity.Note;
 import org.notes.model.vo.note.NoteVO;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.CollectionNoteService;
+import org.notes.service.NoteListCache;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +37,8 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
     private final NoteMapper noteMapper;
 
     private final RequestScopeData requestScopeData;
+
+    private final NoteListCache noteListCache;
 
     @Override
     @NeedLogin
@@ -65,118 +70,83 @@ public class CollectionNoteServiceImpl implements CollectionNoteService {
 
     @Override
     @NeedLogin
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public void createCollectionNote(Integer collectionId, UpdateCollectionNoteBody requestBody) {
-        Long creatorId = requestScopeData.getUserId();
-        Collection collection = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
-        if (collection == null) {
-            throw new ForbiddenException("收藏夹不存在或者没有权限添加笔记");
-        }
-
-        Integer noteId = requestBody.getNoteId();
-        Note note = noteMapper.findById(noteId);
-        if (note == null) {
-            throw new NotFoundException("笔记不存在");
-        }
-
-        CollectionNote collectionNote = collectionNoteMapper.findByCollectionIdAndNoteId(collectionId, noteId);
-
-        if (collectionNote != null) {
-            throw new BadRequestException("该收藏夹已存在目标笔记，请勿重复添加");
-        }
-
-        try {
-            collectionNote = new CollectionNote();
-            collectionNote.setCollectionId(collectionId);
-            collectionNote.setNoteId(noteId);
-
-            collectionNoteMapper.insert(collectionNote);
-
-            // 如果该笔记之前未被当前用户收藏过，增加笔记的收藏计数
-            if (collectionMapper.countByCreatorIdAndNoteId(creatorId, noteId) == 1) {
-                noteMapper.collectNote(noteId);
-            }
-        } catch (Exception e) {
-            throw new BaseException("添加收藏夹笔记失败", e);
-        }
+        changeCollections(requestBody.getNoteId(), Map.of(collectionId, Action.CREATE));
     }
 
     @Override
     @NeedLogin
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public void deleteCollectionNote(Integer collectionId, UpdateCollectionNoteBody requestBody) {
-        Long creatorId = requestScopeData.getUserId();
-        Collection collection = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
-        if (collection == null) {
-            throw new ForbiddenException("收藏夹不存在或者没有权限删除笔记");
-        }
-
-        Integer noteId = requestBody.getNoteId();
-        Note note = noteMapper.findById(noteId);
-        if (note == null) {
-            throw new NotFoundException("笔记不存在");
-        }
-
-        CollectionNote collectionNote = collectionNoteMapper.findByCollectionIdAndNoteId(collectionId, noteId);
-        if (collectionNote == null) {
-            throw new NotFoundException("该收藏夹不存在目标笔记");
-        }
-
-        try {
-            collectionNoteMapper.delete(collectionNote);
-
-            // 如果当前用户已无收藏夹包含该笔记，减少笔记的收藏计数
-            if (collectionMapper.countByCreatorIdAndNoteId(creatorId, noteId) == 0) {
-                noteMapper.unCollectNote(noteId);
-            }
-        } catch (Exception e) {
-            throw new BaseException("删除收藏夹笔记失败", e);
-        }
+        changeCollections(requestBody.getNoteId(), Map.of(collectionId, Action.DELETE));
     }
 
     @Override
     @NeedLogin
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public void batchModifyCollection(UpdateCollectionNoteBatchBody requestBody) {
-        Long creatorId = requestScopeData.getUserId();
-        Integer noteId = requestBody.getNoteId();
+        Map<Integer, Action> changes = new TreeMap<>();
+        for (UpdateCollectionNoteBatchBody.UpdateItem item : requestBody.getCollections()) {
+            if (item.getCollectionId() == null || item.getAction() == null) {
+                throw new BadRequestException("收藏夹操作非法");
+            }
+            Action previous = changes.putIfAbsent(item.getCollectionId(), item.getAction());
+            if (previous != null && previous != item.getAction()) {
+                throw new BadRequestException("同一收藏夹不能包含相反操作");
+            }
+        }
+        changeCollections(requestBody.getNoteId(), changes);
+    }
 
-        UpdateCollectionNoteBatchBody.UpdateItem[] collections = requestBody.getCollections();
-
-        for (UpdateCollectionNoteBatchBody.UpdateItem collection : collections) {
-            Integer collectionId = collection.getCollectionId();
-            String action = collection.getAction();
-
-            Collection collectionEntity = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
-
-            if (collectionEntity == null) {
+    private void changeCollections(Integer noteId, Map<Integer, Action> changes) {
+        Long userId = requestScopeData.getUserId();
+        for (Integer collectionId : new TreeSet<>(changes.keySet())) {
+            if (collectionMapper.findByIdAndCreatorIdForUpdate(collectionId, userId) == null) {
                 throw new ForbiddenException("收藏夹不存在或者没有权限修改");
             }
-
-            if (Objects.equals(action, "create")) {
-                try {
-                    if (collectionMapper.countByCreatorIdAndNoteId(creatorId, noteId) == 0) {
-                        noteMapper.collectNote(noteId);
-                    }
-
-                    CollectionNote collectionNote = new CollectionNote();
-                    collectionNote.setCollectionId(collectionId);
-                    collectionNote.setNoteId(noteId);
-                    collectionNoteMapper.insert(collectionNote);
-                } catch (Exception e) {
-                    throw new BaseException("收藏失败", e);
+        }
+        if (noteMapper.findByIdForUpdate(noteId) == null) {
+            throw new NotFoundException("笔记不存在");
+        }
+        boolean changed = false;
+        for (Map.Entry<Integer, Action> change : changes.entrySet()) {
+            Integer collectionId = change.getKey();
+            if (change.getValue() == Action.CREATE) {
+                if (collectionNoteMapper.findByCollectionIdAndNoteIdForUpdate(collectionId, noteId) == null) {
+                    CollectionNote relation = new CollectionNote();
+                    relation.setCollectionId(collectionId);
+                    relation.setNoteId(noteId);
+                    changed |= collectionNoteMapper.insert(relation) > 0;
                 }
-            } else if (Objects.equals(action, "delete")) {
-                try {
-                    collectionNoteMapper.deleteByCollectionIdAndNoteId(collectionId, noteId);
-                    if (collectionMapper.countByCreatorIdAndNoteId(creatorId, noteId) == 0) {
-                        noteMapper.unCollectNote(noteId);
-                    }
-                } catch (Exception e) {
-                    throw new BaseException("取消收藏失败", e);
-                }
+            } else {
+                changed |= collectionNoteMapper.deleteByCollectionIdAndNoteId(collectionId, noteId) > 0;
             }
         }
+        if (changed) {
+            noteMapper.refreshCollectCount(noteId);
+            noteListCache.invalidateAfterCommit();
+        }
+    }
+
+    @Override
+    @NeedLogin
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
+    public void deleteCollection(Integer collectionId) {
+        Long userId = requestScopeData.getUserId();
+        if (collectionMapper.findByIdAndCreatorIdForUpdate(collectionId, userId) == null) {
+            throw new ForbiddenException("收藏夹不存在或者没有权限删除");
+        }
+        List<Integer> noteIds = collectionNoteMapper.findNoteIdsByCollectionId(collectionId);
+        for (Integer noteId : new TreeSet<>(noteIds)) {
+            noteMapper.findByIdForUpdate(noteId);
+        }
+        collectionNoteMapper.deleteByCollectionId(collectionId);
+        collectionMapper.deleteById(collectionId);
+        for (Integer noteId : noteIds) {
+            noteMapper.refreshCollectCount(noteId);
+        }
+        noteListCache.invalidateAfterCommit();
     }
 
     @Override

@@ -27,20 +27,19 @@
     <select id="findByQueryParams" resultType="org.notes.model.entity.Note">
         SELECT * FROM note
         <include refid="whereClause"/>
+        ORDER BY
         <choose>
-            <when test="params.sort != null and params.sort == 'create'">
-                ORDER BY created_at
-                <choose>
-                    <when test="params.order != null and (params.order == 'asc' or params.order == 'desc')">
-                        ${params.order}
-                    </when>
-                    <otherwise>
-                        ASC
-                    </otherwise>
-                </choose>
-            </when>
+            <when test="params.sortBy == 'updated_at'">updated_at</when>
+            <when test="params.sortBy == 'like_count'">like_count</when>
+            <when test="params.sortBy == 'comment_count'">comment_count</when>
+            <when test="params.sortBy == 'collect_count'">collect_count</when>
+            <otherwise>created_at</otherwise>
         </choose>
-        LIMIT #{limit} OFFSET ${offset}
+        <choose>
+            <when test="params.sortOrder == 'asc'">ASC, note_id ASC</when>
+            <otherwise>DESC, note_id DESC</otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="filterFinishedQuestionIdsByUser" resultType="integer">
@@ -88,6 +87,18 @@
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
 
+    <select id="findByIdForUpdate" resultMap="BaseResultMap">
+        SELECT * FROM note WHERE note_id = #{noteId} FOR UPDATE
+    </select>
+
+    <update id="refreshCollectCount">
+        UPDATE note SET collect_count = (
+            SELECT COUNT(DISTINCT c.creator_id)
+            FROM collection_note cn JOIN collection c ON c.collection_id = cn.collection_id
+            WHERE cn.note_id = #{noteId}
+        ) WHERE note_id = #{noteId}
+    </update>
+
     <select id="findById" resultMap="BaseResultMap">
         SELECT * FROM note WHERE note_id = #{noteId}
     </select>
@@ -119,18 +130,6 @@
     <update id="unlikeNote">
         UPDATE note
         SET like_count = like_count - 1
-        WHERE note_id = #{noteId}
-    </update>
-
-    <update id="collectNote">
-        UPDATE note
-        SET collect_count = collect_count + 1
-        WHERE note_id = #{noteId}
-    </update>
-
-    <update id="unCollectNote">
-        UPDATE note
-        SET collect_count = collect_count - 1
         WHERE note_id = #{noteId}
     </update>
 

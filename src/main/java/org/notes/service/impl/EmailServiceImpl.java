@@ -57,9 +57,7 @@ public class EmailServiceImpl implements EmailService {
             emailTask.setCode(verificationCode);
             emailTask.setTimestamp(System.currentTimeMillis());
 
-            if (!reliableRabbitPublisher.sendOrRecord(RabbitMQConfig.EMAIL_QUEUE, emailTask)) {
-                throw new IllegalStateException("验证码消息未被 RabbitMQ 确认");
-            }
+            reliableRabbitPublisher.send(RabbitMQConfig.EMAIL_QUEUE, emailTask);
 
             String codeKey = RedisKey.registerVerificationCode(email);
             try {

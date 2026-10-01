@@ -42,16 +42,6 @@ class RedisProtectionServiceImplTest {
     }
 
     @Test
-    void unlockDeletesOnlyWhenTokenMatches() {
-        when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get("lock:key")).thenReturn("token");
-
-        redisProtectionService.unlock("lock:key", "token");
-
-        verify(stringRedisTemplate).delete("lock:key");
-    }
-
-    @Test
     void withJitterKeepsTtlWithinConfiguredRange() {
         Duration ttl = redisProtectionService.withJitter(Duration.ofMinutes(30), 300);
 

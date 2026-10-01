@@ -2,6 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.notes.mapper.CollectionMapper">
 
+    <select id="findByIdAndCreatorIdForUpdate" resultType="org.notes.model.entity.Collection">
+        SELECT * FROM collection WHERE collection_id = #{collectionId} AND creator_id = #{creatorId} FOR UPDATE
+    </select>
+
     <select id="findById" resultType="org.notes.model.entity.Collection">
         SELECT *
         FROM collection
@@ -19,14 +23,6 @@
         FROM collection
         WHERE collection_id = #{collectionId}
           AND creator_id = #{creatorId}
-    </select>
-
-    <select id="countByCreatorIdAndNoteId" resultType="java.lang.Integer">
-        SELECT COUNT(note_id)
-        FROM collection_note cn
-                 LEFT JOIN collection c ON cn.collection_id = c.collection_id
-        WHERE creator_id = #{creatorId}
-          AND note_id = #{noteId}
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="collectionId">

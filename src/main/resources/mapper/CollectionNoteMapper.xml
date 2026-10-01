@@ -42,11 +42,12 @@
         <result property="updatedAt" column="updated_at" />
     </resultMap>
 
-    <select id="findByCollectionIdAndNoteId" resultType="org.notes.model.entity.CollectionNote">
+    <select id="findByCollectionIdAndNoteIdForUpdate" resultType="org.notes.model.entity.CollectionNote">
         SELECT *
         FROM collection_note
         WHERE collection_id = #{collectionId}
           AND note_id = #{noteId}
+        FOR UPDATE
     </select>
 
     <select id="findNoteIdsByCollectionId" resultType="integer">
@@ -64,13 +65,6 @@
         INSERT INTO collection_note (collection_id, note_id)
         VALUES (#{collectionId}, #{noteId})
     </insert>
-
-    <delete id="delete">
-        DELETE
-        FROM collection_note
-        WHERE collection_id = #{collectionId}
-          AND note_id = #{noteId}
-    </delete>
 
     <delete id="deleteByCollectionId">
         DELETE

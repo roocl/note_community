@@ -73,11 +73,15 @@ class CollectionServiceImplTest {
         verify(collectionMapper).insert(any(Collection.class));
     }
 
+
     @Test
     void deleteCollection_throwsWhenUserDoesNotOwnIt() {
         when(requestScopeData.getUserId()).thenReturn(1L);
-        when(collectionMapper.findByIdAndCreatorId(9, 1L)).thenReturn(null);
-
-        assertThrows(ForbiddenException.class, () -> collectionService.deleteCollection(9));
+        when(collectionMapper.findByIdAndCreatorIdForUpdate(9, 1L)).thenReturn(null);
+        CollectionServiceImpl service = new CollectionServiceImpl(requestScopeData, collectionMapper,
+                collectionNoteMapper, new CollectionNoteServiceImpl(collectionMapper, collectionNoteMapper,
+                noteMapper, requestScopeData, null));
+        assertThrows(ForbiddenException.class, () -> service.deleteCollection(9));
     }
+
 }

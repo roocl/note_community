@@ -23,12 +23,11 @@ import org.notes.model.vo.user.RegisterVO;
 import org.notes.model.vo.user.UserVO;
 import org.notes.repository.UserSearchRepository;
 import org.notes.scope.RequestScopeData;
-import org.notes.config.RabbitMQConfig;
 import org.notes.service.EmailService;
 import org.notes.service.EsSyncFailureService;
 import org.notes.service.FileService;
 import org.notes.service.RedisProtectionService;
-import org.notes.service.ReliableRabbitPublisher;
+import org.notes.service.OutboxService;
 import org.notes.service.PostCommitExecutor;
 import org.notes.task.email.WelcomeEmailTask;
 import org.notes.service.UserService;
@@ -73,7 +72,7 @@ public class UserServiceImpl implements UserService {
     private EmailService emailService;
 
     @Autowired
-    private ReliableRabbitPublisher reliableRabbitPublisher;
+    private OutboxService outboxService;
 
     @Autowired
     private UserSearchRepository userSearchRepository;
@@ -112,20 +111,16 @@ public class UserServiceImpl implements UserService {
         BeanUtils.copyProperties(request, user);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        registerAfterCommit(() -> {
-            syncUserToEs(user);
-
-            // 注册成功后发送欢迎邮件
-            if (cn.hutool.core.util.StrUtil.isNotBlank(user.getEmail())) {
-                WelcomeEmailTask welcomeTask = new WelcomeEmailTask();
-                welcomeTask.setEmail(user.getEmail());
-                welcomeTask.setUsername(user.getUsername());
-                reliableRabbitPublisher.sendOrRecord(RabbitMQConfig.WELCOME_EMAIL_QUEUE, welcomeTask);
-            }
-        });
+        registerAfterCommit(() -> syncUserToEs(user));
 
         try {
             userMapper.insert(user);
+            if (StrUtil.isNotBlank(user.getEmail())) {
+                WelcomeEmailTask welcomeTask = new WelcomeEmailTask();
+                welcomeTask.setEmail(user.getEmail());
+                welcomeTask.setUsername(user.getUsername());
+                outboxService.record(welcomeTask);
+            }
             String token = jwtUtil.generateToken(user.getUserId());
 
             RegisterVO registerVO = new RegisterVO();

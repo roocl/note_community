@@ -18,7 +18,7 @@ public interface NoteLikeMapper {
             @Param("noteIds") List<Integer> noteIds
     );
 
-    NoteLike findByUserIdAndNoteId(
+    NoteLike findByUserIdAndNoteIdForUpdate(
             @Param("userId") Long userId,
             @Param("noteId") Integer noteId
     );

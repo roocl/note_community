@@ -21,13 +21,11 @@ public interface CollectionNoteMapper {
 
     List<Integer> findNoteIdsByCollectionId(@Param("collectionId") Integer collectionId);
 
-    CollectionNote findByCollectionIdAndNoteId(
+    CollectionNote findByCollectionIdAndNoteIdForUpdate(
             @Param("collectionId") Integer collectionId,
             @Param("noteId") Integer noteId);
 
     int insert(CollectionNote collectionNote);
-
-    int delete(CollectionNote collectionNote);
 
     int deleteByCollectionId(@Param("collectionId") Integer collectionId);
 

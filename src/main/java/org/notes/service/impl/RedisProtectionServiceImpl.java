@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.notes.service.RedisProtectionService;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -17,6 +19,9 @@ public class RedisProtectionServiceImpl implements RedisProtectionService {
 
     private static final String NULL_MARKER_PREFIX = "cache:null:";
     private static final Duration NULL_MARKER_TTL = Duration.ofMinutes(5);
+    private static final DefaultRedisScript<Long> UNLOCK = new DefaultRedisScript<>(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+            Long.class);
 
     private final StringRedisTemplate stringRedisTemplate;
 
@@ -60,10 +65,7 @@ public class RedisProtectionServiceImpl implements RedisProtectionService {
             return;
         }
         try {
-            String currentToken = stringRedisTemplate.opsForValue().get(lockKey);
-            if (token.equals(currentToken)) {
-                stringRedisTemplate.delete(lockKey);
-            }
+            stringRedisTemplate.execute(UNLOCK, List.of(lockKey), token);
         } catch (Exception e) {
             log.warn("Redis lock release failed, key={}", lockKey, e);
         }

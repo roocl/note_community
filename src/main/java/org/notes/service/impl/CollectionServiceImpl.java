@@ -6,7 +6,6 @@ import org.notes.exception.BaseException;
 import org.notes.exception.ForbiddenException;
 import org.notes.mapper.CollectionMapper;
 import org.notes.mapper.CollectionNoteMapper;
-import org.notes.mapper.NoteMapper;
 import org.notes.model.dto.collection.CollectionQueryParams;
 import org.notes.model.dto.collection.CreateCollectionBody;
 import org.notes.model.dto.collection.UpdateCollectionBody;
@@ -15,6 +14,7 @@ import org.notes.model.vo.collection.CollectionVO;
 import org.notes.model.vo.collection.CreateCollectionVO;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.CollectionService;
+import org.notes.service.CollectionNoteService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +31,7 @@ public class CollectionServiceImpl implements CollectionService {
 
     private final CollectionNoteMapper collectionNoteMapper;
 
-    private final NoteMapper noteMapper;
+    private final CollectionNoteService collectionNoteService;
 
     @Override
     public List<CollectionVO> getCollections(CollectionQueryParams queryParams) {
@@ -114,21 +114,8 @@ public class CollectionServiceImpl implements CollectionService {
 
     @Override
     @NeedLogin
-    @Transactional(rollbackFor = Exception.class)
     public void deleteCollection(Integer collectionId) {
-        Long creatorId = requestScopeData.getUserId();
-        Collection collection = collectionMapper.findByIdAndCreatorId(collectionId, creatorId);
-
-        if (collection == null) {
-            throw new ForbiddenException("收藏夹不存在或者没有权限删除");
-        }
-
-        try {
-            collectionMapper.deleteById(collectionId);
-            collectionNoteMapper.deleteByCollectionId(collectionId);
-        } catch (Exception e) {
-            throw new BaseException("删除收藏夹失败", e);
-        }
+        collectionNoteService.deleteCollection(collectionId);
     }
 
 }

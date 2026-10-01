@@ -29,6 +29,10 @@ public interface NoteMapper {
          */
         Note findById(@Param("noteId") Integer noteId);
 
+        Note findByIdForUpdate(@Param("noteId") Integer noteId);
+
+        int refreshCollectCount(@Param("noteId") Integer noteId);
+
         /**
          * 根据笔记ID列表批量查询笔记
          *
@@ -108,22 +112,6 @@ public interface NoteMapper {
          * @return 取消点赞成功记录数
          */
         int unlikeNote(@Param("noteId") Integer noteId);
-
-        /**
-         * 收藏笔记
-         *
-         * @param noteId 笔记ID，用于标识要收藏的笔记
-         * @return 收藏结果
-         */
-        int collectNote(@Param("noteId") Integer noteId);
-
-        /**
-         * 取消收藏笔记
-         *
-         * @param noteId 笔记ID，用于标识要取消收藏的笔记
-         * @return 取消收藏结果
-         */
-        int unCollectNote(@Param("noteId") Integer noteId);
 
         /**
          * 根据笔记ID删除笔记

@@ -14,7 +14,7 @@ public interface CommentMapper {
 
     void update(Comment comment);
 
-    void deleteById(Integer commentId);
+    int deleteById(Integer commentId);
 
     Comment findById(Integer commentId);
 

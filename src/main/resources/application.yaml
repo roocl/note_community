@@ -1,0 +1,81 @@
+spring:
+  application:
+    name: kama-notes
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  profiles:
+    active: dev
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+    timeout: 2000
+    jedis:
+      pool:
+        enabled: on
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: 2000
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: ${MAIL_USERNAME:fwazjj@foxmail.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+    protocol: smtps
+    default-encoding: UTF-8
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+    listener:
+      simple:
+        acknowledge-mode: auto
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 2000
+  elasticsearch:
+    uris: http://localhost:9200
+
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  type-aliases-package: com.kama.notes.entity.custom
+  type-handlers-package: com.kama.notes.typehandler
+
+jwt:
+  secret: ${JWT_SECRET:dev-default-secret-change-in-production}
+  expiration: 2592000
+
+server:
+  port: 8080
+
+# 自定义邮件配置
+mail:
+  verify-code:
+    expire-minutes: 15  # 验证码过期时间 15 min
+    limit-expire-seconds: 60  # 发送过一次验证码后，在 60s 内不能再发送验证码，用于限流
+    template-path: "mail/verify-code"

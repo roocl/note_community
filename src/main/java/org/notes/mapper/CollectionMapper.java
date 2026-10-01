@@ -11,13 +11,11 @@ public interface CollectionMapper {
 
     Collection findById(@Param("collectionId") Integer collectionId);
 
+    Collection findByIdAndCreatorIdForUpdate(@Param("collectionId") Integer collectionId, @Param("creatorId") Long creatorId);
+
     List<Collection> findByCreatorId(@Param("creatorId") Long creatorId);
 
     Collection findByIdAndCreatorId(@Param("collectionId") Integer collectionId, @Param("creatorId") Long creatorId);
-
-    int countByCreatorIdAndNoteId(
-            @Param("creatorId") Long creatorId,
-            @Param("noteId") Integer noteId);
 
     int insert(Collection collection);
 

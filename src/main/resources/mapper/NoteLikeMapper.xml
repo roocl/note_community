@@ -16,11 +16,12 @@
         </if>
     </select>
 
-    <select id="findByUserIdAndNoteId" resultType="org.notes.model.entity.NoteLike">
+    <select id="findByUserIdAndNoteIdForUpdate" resultType="org.notes.model.entity.NoteLike">
         SELECT *
         FROM note_like
         WHERE user_id = #{userId}
           AND note_id = #{noteId}
+        FOR UPDATE
     </select>
 
     <insert id="insert">

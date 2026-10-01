@@ -9,8 +9,6 @@ import org.notes.exception.NotFoundException;
 import org.notes.mapper.NoteLikeMapper;
 import org.notes.mapper.NoteMapper;
 import org.notes.scope.RequestScopeData;
-import org.notes.service.ReliableRabbitPublisher;
-import org.notes.service.PostCommitExecutor;
 
 import java.util.List;
 import java.util.Set;
@@ -27,10 +25,6 @@ class NoteLikeServiceImplTest {
     private NoteMapper noteMapper;
     @Mock
     private RequestScopeData requestScopeData;
-    @Mock
-    private ReliableRabbitPublisher reliableRabbitPublisher;
-    @Mock
-    private PostCommitExecutor postCommitExecutor;
 
     @InjectMocks
     private NoteLikeServiceImpl noteLikeService;
@@ -46,14 +40,14 @@ class NoteLikeServiceImplTest {
 
     @Test
     void likeNote_throwsWhenNoteMissing() {
-        when(noteMapper.findById(9)).thenReturn(null);
+        when(noteMapper.findByIdForUpdate(9)).thenReturn(null);
 
         assertThrows(NotFoundException.class, () -> noteLikeService.likeNote(9));
     }
 
     @Test
     void unlikeNote_throwsWhenNoteMissing() {
-        when(noteMapper.findById(9)).thenReturn(null);
+        when(noteMapper.findByIdForUpdate(9)).thenReturn(null);
 
         assertThrows(NotFoundException.class, () -> noteLikeService.unlikeNote(9));
     }

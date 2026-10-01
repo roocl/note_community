@@ -21,14 +21,11 @@ import org.notes.model.vo.note.*;
 import org.notes.repository.NoteSearchRepository;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.*;
-import org.notes.utils.PaginationUtils;
 import org.notes.utils.SearchUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.elasticsearch.core.suggest.Completion;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +42,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class NoteServiceImpl implements NoteService {
 
     private final NoteMapper noteMapper;
+
+    private final NoteListCache noteListCache;
 
     private final UserService userService;
 
@@ -68,13 +67,10 @@ public class NoteServiceImpl implements NoteService {
     private final PostCommitExecutor postCommitExecutor;
 
     @Override
-    @Cacheable(value = "notes", key = "'list:' + T(java.util.Objects).hash(#params.page, #params.pageSize, #params.questionId, #params.authorId, #params.collectionId, #params.sortBy, #params.sortOrder, #params.recentDays)", unless = "#result == null")
     public PageResult<List<NoteVO>> getNotes(NoteQueryParams params) {
-        int offset = PaginationUtils.calculateOffset(params.getPage(), params.getPageSize());
-        int total = noteMapper.countNotesByQueryParam(params);
-        Pagination pagination = new Pagination(params.getPage(), params.getPageSize(), total);
-
-        List<Note> notes = noteMapper.findByQueryParams(params, offset, params.getPageSize());
+        NoteListCache.Snapshot snapshot = noteListCache.getNotes(params);
+        Pagination pagination = snapshot.pagination();
+        List<Note> notes = snapshot.notes();
 
         List<Integer> noteIds = notes.stream().map(Note::getNoteId).toList();
         List<Long> authorIds = notes.stream().map(Note::getAuthorId).toList();
@@ -115,15 +111,8 @@ public class NoteServiceImpl implements NoteService {
                 }
 
                 NoteVO.UserActionsVO userActionsVO = new NoteVO.UserActionsVO();
-                if (userLikedNoteIds != null && userLikedNoteIds.contains(note.getNoteId())) {
-                    userActionsVO.setIsLiked(true);
-                }
-                if (userCollectedNoteIds != null && userCollectedNoteIds.contains(note.getNoteId())) {
-                    userActionsVO.setIsCollected(true);
-                }
-
-                // todo markdown折叠
-
+                userActionsVO.setIsLiked(userLikedNoteIds.contains(note.getNoteId()));
+                userActionsVO.setIsCollected(userCollectedNoteIds.contains(note.getNoteId()));
                 noteVO.setUserActionsVO(userActionsVO);
                 return noteVO;
             }).toList();
@@ -136,7 +125,6 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @NeedLogin
-    @CacheEvict(value = "notes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
     public CreateNoteVO createNote(CreateNoteRequest request) {
         Integer questionId = request.getQuestionId();
@@ -156,6 +144,7 @@ public class NoteServiceImpl implements NoteService {
 
         try {
             noteMapper.insert(note);
+            noteListCache.invalidateAfterCommit();
 
             // 维护今日提交排行榜（事务提交后执行）
             registerAfterCommit(() -> {
@@ -179,10 +168,9 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @NeedLogin
-    @CacheEvict(value = "notes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
     public void updateNote(Integer noteId, UpdateNoteRequest request) {
-        Note note = noteMapper.findById(noteId);
+        Note note = noteMapper.findByIdForUpdate(noteId);
         if (note == null) {
             throw new NotFoundException("noteId对应的笔记不存在");
         }
@@ -199,6 +187,7 @@ public class NoteServiceImpl implements NoteService {
             note.setSearchVector(processedVector);
 
             noteMapper.update(note);
+            noteListCache.invalidateAfterCommit();
 
             registerAfterCommit(() -> syncNoteToEs(note));
         } catch (Exception e) {
@@ -208,10 +197,9 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @NeedLogin
-    @CacheEvict(value = "notes", allEntries = true)
     @Transactional(rollbackFor = Exception.class)
     public void deleteNote(Integer noteId) {
-        Note note = noteMapper.findById(noteId);
+        Note note = noteMapper.findByIdForUpdate(noteId);
         if (note == null) {
             throw new NotFoundException("noteId对应的笔记不存在");
         }
@@ -223,6 +211,7 @@ public class NoteServiceImpl implements NoteService {
 
         try {
             noteMapper.deleteById(noteId);
+            noteListCache.invalidateAfterCommit();
 
             registerAfterCommit(() -> deleteNoteFromEs(noteId));
 

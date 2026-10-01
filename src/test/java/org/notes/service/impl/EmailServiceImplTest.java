@@ -53,12 +53,11 @@ class EmailServiceImplTest {
                 eq(60L),
                 eq(TimeUnit.SECONDS)
         )).thenReturn(true);
-        when(reliableRabbitPublisher.sendOrRecord(anyString(), any(Object.class))).thenReturn(true);
 
         emailService.sendVerificationCode(email);
 
         // 验证发送到 RabbitMQ
-        verify(reliableRabbitPublisher).sendOrRecord(anyString(), any(Object.class));
+        verify(reliableRabbitPublisher).send(anyString(), any(Object.class));
         // 验证验证码写入 Redis
         verify(valueOperations).set(eq(RedisKey.registerVerificationCode(email)), anyString(), eq(15L), any());
         // 验证频率限制标记写入 Redis
@@ -84,7 +83,7 @@ class EmailServiceImplTest {
         )).thenReturn(false);
 
         assertThrows(RuntimeException.class, () -> emailService.sendVerificationCode(email));
-        verify(reliableRabbitPublisher, never()).sendOrRecord(anyString(), any(Object.class));
+        verify(reliableRabbitPublisher, never()).send(anyString(), any(Object.class));
     }
 
     // ==================== checkVerificationCode ====================

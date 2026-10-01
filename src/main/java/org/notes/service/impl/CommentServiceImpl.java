@@ -3,7 +3,6 @@ package org.notes.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.notes.annotation.NeedLogin;
-import org.notes.config.RabbitMQConfig;
 import org.notes.exception.BaseException;
 import org.notes.exception.ForbiddenException;
 import org.notes.exception.NotFoundException;
@@ -27,13 +26,12 @@ import org.notes.model.vo.comment.CommentVO;
 import org.notes.model.vo.user.UserActionVO;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.CommentService;
-import org.notes.service.ReliableRabbitPublisher;
-import org.notes.service.PostCommitExecutor;
+import org.notes.service.NoteListCache;
+import org.springframework.transaction.annotation.Isolation;
+import org.notes.service.OutboxService;
 import org.notes.task.notification.NotificationTask;
 import org.notes.utils.PaginationUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
@@ -44,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -56,17 +53,17 @@ public class CommentServiceImpl implements CommentService {
     private final NoteMapper noteMapper;
     private final UserMapper userMapper;
     private final CommentLikeMapper commentLikeMapper;
-    private final ReliableRabbitPublisher reliableRabbitPublisher;
-    private final PostCommitExecutor postCommitExecutor;
+    private final OutboxService outboxService;
     private final RequestScopeData requestScopeData;
     private final MessageMapper messageMapper;
+    private final NoteListCache noteListCache;
 
     @Override
     @NeedLogin
     @Transactional(rollbackFor = Exception.class)
     public Integer createComment(CreateCommentRequest request) {
         try {
-            Note note = noteMapper.findById(request.getNoteId());
+            Note note = noteMapper.findByIdForUpdate(request.getNoteId());
             if (note == null) {
                 throw new NotFoundException("笔记不存在");
             }
@@ -84,13 +81,13 @@ public class CommentServiceImpl implements CommentService {
 
             commentMapper.insert(comment);
             noteMapper.incrementCommentCount(request.getNoteId());
+            noteListCache.invalidateAfterCommit();
 
             if (parentId != null) {
                 commentMapper.incrementReplyCount(request.getParentId());
             }
 
             NotificationTask notificationTask = new NotificationTask();
-            notificationTask.setEventId(UUID.randomUUID().toString());
             notificationTask.setReceiverId(note.getAuthorId());
             notificationTask.setSenderId(userId);
             notificationTask.setType(MessageType.COMMENT);
@@ -98,13 +95,7 @@ public class CommentServiceImpl implements CommentService {
             notificationTask.setTargetType(parentId != null ? MessageTargetType.COMMENT : MessageTargetType.NOTE);
             notificationTask.setContent(request.getContent());
 
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    postCommitExecutor.execute(() -> reliableRabbitPublisher.sendOrRecord(
-                            RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask));
-                }
-            });
+            outboxService.record(notificationTask);
 
             return comment.getCommentId();
         } catch (BaseException e) {
@@ -140,7 +131,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @NeedLogin
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public void deleteComment(Integer commentId) {
         Long userId = requestScopeData.getUserId();
         Comment comment = commentMapper.findById(commentId);
@@ -153,8 +144,19 @@ public class CommentServiceImpl implements CommentService {
             throw new ForbiddenException("没有权限删除该评论");
         }
 
+        noteMapper.findByIdForUpdate(comment.getNoteId());
+        comment = commentMapper.findById(commentId);
+        if (comment == null) {
+            throw new NotFoundException("评论不存在");
+        }
         try {
-            commentMapper.deleteById(commentId);
+            if (commentMapper.deleteById(commentId) > 0) {
+                noteMapper.decrementCommentCount(comment.getNoteId());
+                if (comment.getParentId() != null && comment.getParentId() > 0) {
+                    commentMapper.decrementReplyCount(comment.getParentId());
+                }
+                noteListCache.invalidateAfterCommit();
+            }
         } catch (Exception e) {
             throw new BaseException("删除评论失败", e);
         }
@@ -273,20 +275,13 @@ public class CommentServiceImpl implements CommentService {
             commentLikeMapper.insert(commentLike);
 
             NotificationTask notificationTask = new NotificationTask();
-            notificationTask.setEventId(UUID.randomUUID().toString());
             notificationTask.setReceiverId(comment.getAuthorId());
             notificationTask.setSenderId(userId);
             notificationTask.setType(MessageType.LIKE);
             notificationTask.setTargetId(commentId);
             notificationTask.setTargetType(MessageTargetType.COMMENT);
 
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    postCommitExecutor.execute(() -> reliableRabbitPublisher.sendOrRecord(
-                            RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask));
-                }
-            });
+            outboxService.record(notificationTask);
         } catch (Exception e) {
             throw new BaseException("点赞评论失败", e);
         }

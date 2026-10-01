@@ -2,7 +2,6 @@ package org.notes.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.notes.annotation.NeedLogin;
-import org.notes.config.RabbitMQConfig;
 import org.notes.exception.BaseException;
 import org.notes.exception.NotFoundException;
 import org.notes.mapper.NoteLikeMapper;
@@ -13,18 +12,16 @@ import org.notes.model.enums.message.MessageTargetType;
 import org.notes.model.enums.message.MessageType;
 import org.notes.scope.RequestScopeData;
 import org.notes.service.NoteLikeService;
-import org.notes.service.ReliableRabbitPublisher;
-import org.notes.service.PostCommitExecutor;
+import org.notes.service.NoteListCache;
+import org.springframework.transaction.annotation.Isolation;
+import org.notes.service.OutboxService;
 import org.notes.task.notification.NotificationTask;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -36,8 +33,8 @@ public class NoteLikeServiceImpl implements NoteLikeService {
 
     private final RequestScopeData requestScopeData;
 
-    private final ReliableRabbitPublisher reliableRabbitPublisher;
-    private final PostCommitExecutor postCommitExecutor;
+    private final OutboxService outboxService;
+    private final NoteListCache noteListCache;
 
     @Override
     public Set<Integer> findUserLikedNoteIds(Long userId, List<Integer> noteIds) {
@@ -47,9 +44,45 @@ public class NoteLikeServiceImpl implements NoteLikeService {
 
     @Override
     @NeedLogin
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public void likeNote(Integer noteId) {
-        Note note = noteMapper.findById(noteId);
+        Note note = noteMapper.findByIdForUpdate(noteId);
+        if (note == null) {
+            throw new NotFoundException("笔记未找到");
+        }
+
+        Long userId = requestScopeData.getUserId();
+
+        try {
+            if (noteLikeMapper.findByUserIdAndNoteIdForUpdate(userId, noteId) != null) {
+                return;
+            }
+            NoteLike noteLike = new NoteLike();
+            noteLike.setNoteId(noteId);
+            noteLike.setUserId(userId);
+            noteLikeMapper.insert(noteLike);
+
+            noteMapper.likeNote(noteId);
+            noteListCache.invalidateAfterCommit();
+
+            NotificationTask notificationTask = new NotificationTask();
+            notificationTask.setReceiverId(note.getAuthorId());
+            notificationTask.setSenderId(userId);
+            notificationTask.setType(MessageType.LIKE);
+            notificationTask.setTargetId(noteId);
+            notificationTask.setTargetType(MessageTargetType.NOTE);
+
+            outboxService.record(notificationTask);
+        } catch (Exception e) {
+            throw new BaseException("点赞失败", e);
+        }
+    }
+
+    @Override
+    @NeedLogin
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
+    public void unlikeNote(Integer noteId) {
+        Note note = noteMapper.findByIdForUpdate(noteId);
         if (note == null) {
             throw new NotFoundException("笔记未找到");
         }
@@ -58,49 +91,11 @@ public class NoteLikeServiceImpl implements NoteLikeService {
 
         try {
             NoteLike noteLike = new NoteLike();
-            noteLike.setNoteId(noteId);
             noteLike.setUserId(userId);
-            noteLikeMapper.insert(noteLike);
-
-            noteMapper.likeNote(noteId);
-
-            NotificationTask notificationTask = new NotificationTask();
-            notificationTask.setEventId(UUID.randomUUID().toString());
-            notificationTask.setReceiverId(note.getAuthorId());
-            notificationTask.setSenderId(userId);
-            notificationTask.setType(MessageType.LIKE);
-            notificationTask.setTargetId(noteId);
-            notificationTask.setTargetType(MessageTargetType.NOTE);
-
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    postCommitExecutor.execute(() -> reliableRabbitPublisher.sendOrRecord(
-                            RabbitMQConfig.NOTIFICATION_QUEUE, notificationTask));
-                }
-            });
-        } catch (Exception e) {
-            throw new BaseException("点赞失败", e);
-        }
-    }
-
-    @Override
-    @NeedLogin
-    @Transactional(rollbackFor = Exception.class)
-    public void unlikeNote(Integer noteId) {
-        Note note = noteMapper.findById(noteId);
-        if (note == null) {
-            throw new NotFoundException("笔记未找到");
-        }
-
-        Long userId = requestScopeData.getUserId();
-
-        try {
-            NoteLike noteLike = noteLikeMapper.findByUserIdAndNoteId(userId, noteId);
-
-            if (noteLike != null) {
-                noteLikeMapper.delete(noteLike);
+            noteLike.setNoteId(noteId);
+            if (noteLikeMapper.delete(noteLike) > 0) {
                 noteMapper.unlikeNote(noteId);
+                noteListCache.invalidateAfterCommit();
             }
         } catch (Exception e) {
             throw new BaseException("取消点赞失败", e);

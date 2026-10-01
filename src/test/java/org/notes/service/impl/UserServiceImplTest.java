@@ -26,7 +26,6 @@ import org.notes.service.EsSyncFailureService;
 import org.notes.service.FileService;
 import org.notes.service.RedisProtectionService;
 import org.notes.utils.JwtUtil;
-import org.notes.service.ReliableRabbitPublisher;
 import org.notes.service.PostCommitExecutor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -52,8 +51,6 @@ class UserServiceImplTest {
     private RequestScopeData requestScopeData;
     @Mock
     private EmailService emailService;
-    @Mock
-    private ReliableRabbitPublisher reliableRabbitPublisher;
     @Mock
     private PostCommitExecutor postCommitExecutor;
     @Mock
